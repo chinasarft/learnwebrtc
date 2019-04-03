@@ -22,7 +22,8 @@ if(WIN32)
 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /source-charset:utf-8")
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /source-charset:utf-8")
 endif()
-
+message("=-${CMAKE_CXX_FLAGS_RELEASE}-${CMAKE_CXX_FLAGS_DEBUG}")
+message("=-${CMAKE_C_FLAGS_RELEASE}-${CMAKE_C_FLAGS_DEBUG}")
 #link_directories("${CMAKE_SOURCE_DIR}/deps/lib/x86")
 set(CMAKE_INCLUDE_CURRENT_DIR TRUE)
 

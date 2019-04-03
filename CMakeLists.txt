@@ -10,7 +10,6 @@ else()
     message(FATAL_ERROR "should specify WEBRTC_LIB_PATH")
 endif()
 
-add_compile_options(-std=c++14)
 if (APPLE)
     # -fno-rtti 禁止运行时类型信息 不加会出现某些包含纯虚函数的类 undefine reference 暂时也没搞懂原因
     add_compile_options(-fno-rtti)
@@ -25,7 +24,10 @@ elseif(WIN32)
     message("-${CMAKE_CXX_FLAGS_RELEASE}-${CMAKE_CXX_FLAGS_DEBUG}")
     string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
     string(REPLACE "/MDd" "/MTd" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
+	string(REPLACE "/MD" "/MT" CMAKE_C_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
+    string(REPLACE "/MDd" "/MTd" CMAKE_C_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
     message("-${CMAKE_CXX_FLAGS_RELEASE}-${CMAKE_CXX_FLAGS_DEBUG}")
+	message("-${CMAKE_C_FLAGS_RELEASE}-${CMAKE_C_FLAGS_DEBUG}")
 	add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
 endif()
 
@@ -81,7 +83,6 @@ elseif(WIN32)
         amstrmid
         msdmo
         strmiids
-		stdc++
 	)
 endif()
 

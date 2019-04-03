@@ -5,14 +5,13 @@
 #include <memory>
 #include <string>
 
-#include <arpa/inet.h>
 #include "api/media_stream_interface.h"
 #include "api/video/video_frame.h"
 #include "examples/peerconnection/client/peer_connection_client.h"
 #include "media/base/media_channel.h"
 #include "media/base/video_common.h"
-#if defined(WEBRTC_WIN)
-#include "rtc_base/win32.h"
+#if !defined(WEBRTC_WIN)
+#include <arpa/inet.h>
 #endif  // WEBRTC_WIN
 
 class MainWndCallback {

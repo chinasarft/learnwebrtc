@@ -1,9 +1,9 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "windowstate.h"
 #include <QMainWindow>
 #include <QListWidgetItem>
-#include "windowstate.h"
 
 namespace Ui {
 class MainWindow;

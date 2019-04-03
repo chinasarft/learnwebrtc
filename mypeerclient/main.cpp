@@ -1,9 +1,9 @@
-#include "mainwindow.h"
-#include <QApplication>
 #ifdef WIN32
 #include "rtc_base/win32_socket_init.h"
 #include "rtc_base/win32_socket_server.h"
 #endif
+#include "mainwindow.h"
+#include <QApplication>
 #include "flag_defs.h"
 
 int main(int argc, char **argv)
