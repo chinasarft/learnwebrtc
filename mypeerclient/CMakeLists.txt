@@ -84,23 +84,13 @@ elseif(WIN32)
 	ADD_EXECUTABLE(rtcclient WIN32 ${source_files} ${header_files} ${qt_UI_HEADERS} ${qt_QRC_SOURCES})
 endif()
 message("in rtclient:${LINK_LIBS}")
-if(WIN32)
-	target_link_libraries(rtcclient
-		Qt5Widgets
-		webrtc
-		rtc_base
-		${LINK_LIBS}
-		Qt5Gui
-		Qt5Core
-		qtmain
-	)
-else()
-	target_link_libraries(rtcclient
-		Qt5::Widgets
-		webrtc
-		rtc_base
-		${LINK_LIBS}
-	)
-endif()
+
+target_link_libraries(rtcclient
+	Qt5::Widgets
+	webrtc
+	rtc_base
+	${LINK_LIBS}
+)
+
 
 #set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT dbt)
