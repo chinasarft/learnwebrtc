@@ -8,7 +8,7 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "examples/peerconnection/client/conductor.h"
+#include "conductor.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -30,7 +30,7 @@
 #include "api/video_codecs/builtin_video_encoder_factory.h"
 #include "api/video_codecs/video_decoder_factory.h"
 #include "api/video_codecs/video_encoder_factory.h"
-#include "examples/peerconnection/client/defaults.h"
+#include "defaults.h"
 #include "modules/audio_device/include/audio_device.h"
 #include "modules/audio_processing/include/audio_processing.h"
 #include "modules/video_capture/video_capture.h"
@@ -41,7 +41,7 @@
 #include "rtc_base/logging.h"
 #include "rtc_base/ref_counted_object.h"
 #include "rtc_base/rtc_certificate_generator.h"
-#include "rtc_base/strings/json.h"
+#include "fixjson.h"
 #include "test/vcm_capturer.h"
 
 namespace {
@@ -197,10 +197,8 @@ void Conductor::DeletePeerConnection() {
 
 void Conductor::EnsureStreamingUI() {
   RTC_DCHECK(peer_connection_);
-  if (main_wnd_->IsWindow()) {
-    if (main_wnd_->current_ui() != MainWindow::STREAMING)
-      main_wnd_->SwitchToStreamingUI();
-  }
+  if (main_wnd_->current_ui() != MainWindow::STREAMING)
+    main_wnd_->SwitchToStreamingUI();
 }
 
 //
@@ -232,18 +230,18 @@ void Conductor::OnIceCandidate(const webrtc::IceCandidateInterface* candidate) {
     return;
   }
 
-  Json::StyledWriter writer;
-  Json::Value jmessage;
+  char jsonstr[2024];
+  memset(jsonstr, 0, sizeof(jsonstr));
 
-  jmessage[kCandidateSdpMidName] = candidate->sdp_mid();
-  jmessage[kCandidateSdpMlineIndexName] = candidate->sdp_mline_index();
   std::string sdp;
   if (!candidate->ToString(&sdp)) {
     RTC_LOG(LS_ERROR) << "Failed to serialize candidate";
     return;
   }
-  jmessage[kCandidateSdpName] = sdp;
-  SendMessage(writer.write(jmessage));
+  sprintf(jsonstr, "{\"%s\":\"%s\", \"%s\":%d, \"%s\":\"%s\"}",kCandidateSdpMidName, candidate->sdp_mid().c_str(),
+      kCandidateSdpMlineIndexName, candidate->sdp_mline_index(),
+      kCandidateSdpName, sdp.c_str());
+  SendMessage(jsonstr);
 }
 
 //
@@ -260,8 +258,6 @@ void Conductor::OnDisconnected() {
 
   DeletePeerConnection();
 
-  if (main_wnd_->IsWindow())
-    main_wnd_->SwitchToConnectUI();
 }
 
 void Conductor::OnPeerConnected(int id, const std::string& name) {
@@ -304,17 +300,17 @@ void Conductor::OnMessageFromPeer(int peer_id, const std::string& message) {
     return;
   }
 
-  Json::Reader reader;
-  Json::Value jmessage;
-  if (!reader.parse(message, jmessage)) {
-    RTC_LOG(WARNING) << "Received unknown message. " << message;
-    return;
-  }
-  std::string type_str;
   std::string json_object;
 
-  rtc::GetStringFromJsonObject(jmessage, kSessionDescriptionTypeName,
-                               &type_str);
+  char jsonvalue[2048];
+  memset(jsonvalue, 0, sizeof(jsonvalue));
+  int vlen = sizeof(jsonvalue);
+  int ret = LinkGetJsonStringByKey(message.c_str(), kSessionDescriptionTypeName, jsonvalue, &vlen);
+  std::string type_str;
+  if (ret == 0 )
+    type_str = jsonvalue;
+  memset(jsonvalue, 0, sizeof(jsonvalue));
+
   if (!type_str.empty()) {
     if (type_str == "offer-loopback") {
       // This is a loopback call.
@@ -334,8 +330,11 @@ void Conductor::OnMessageFromPeer(int peer_id, const std::string& message) {
     }
     webrtc::SdpType type = *type_maybe;
     std::string sdp;
-    if (!rtc::GetStringFromJsonObject(jmessage, kSessionDescriptionSdpName,
-                                      &sdp)) {
+    ret = LinkGetJsonStringByKey(message.c_str(), kSessionDescriptionSdpName, jsonvalue, &vlen);
+    if (ret == 0)
+        sdp = jsonvalue;
+    memset(jsonvalue, 0, sizeof(jsonvalue));
+    if (sdp.empty()) {
       RTC_LOG(WARNING) << "Can't parse received session description message.";
       return;
     }
@@ -359,11 +358,20 @@ void Conductor::OnMessageFromPeer(int peer_id, const std::string& message) {
     std::string sdp_mid;
     int sdp_mlineindex = 0;
     std::string sdp;
-    if (!rtc::GetStringFromJsonObject(jmessage, kCandidateSdpMidName,
-                                      &sdp_mid) ||
-        !rtc::GetIntFromJsonObject(jmessage, kCandidateSdpMlineIndexName,
-                                   &sdp_mlineindex) ||
-        !rtc::GetStringFromJsonObject(jmessage, kCandidateSdpName, &sdp)) {
+
+    ret = LinkGetJsonStringByKey(message.c_str(), kCandidateSdpMidName, jsonvalue, &vlen);
+    if (ret == 0)
+        sdp_mid = jsonvalue;
+    memset(jsonvalue, 0, sizeof(jsonvalue));
+
+    sdp_mlineindex = LinkGetJsonIntByKey(message.c_str(), kCandidateSdpMlineIndexName);
+
+    ret = LinkGetJsonStringByKey(message.c_str(), kCandidateSdpName, jsonvalue, &vlen);
+    if (ret == 0)
+        sdp = jsonvalue;
+    memset(jsonvalue, 0, sizeof(jsonvalue));
+
+    if (sdp_mlineindex < 0 || sdp.empty() || sdp_mid.empty()) {
       RTC_LOG(WARNING) << "Can't parse received message.";
       return;
     }
@@ -469,8 +477,7 @@ void Conductor::DisconnectFromCurrentPeer() {
     DeletePeerConnection();
   }
 
-  if (main_wnd_->IsWindow())
-    main_wnd_->SwitchToPeerList(client_->peers());
+  main_wnd_->SwitchToPeerList(client_->peers());
 }
 
 void Conductor::UIThreadCallback(int msg_id, void* data) {
@@ -479,14 +486,10 @@ void Conductor::UIThreadCallback(int msg_id, void* data) {
       RTC_LOG(INFO) << "PEER_CONNECTION_CLOSED";
       DeletePeerConnection();
 
-      if (main_wnd_->IsWindow()) {
-        if (client_->is_connected()) {
-          main_wnd_->SwitchToPeerList(client_->peers());
-        } else {
-          main_wnd_->SwitchToConnectUI();
-        }
+      if (client_->is_connected()) {
+        main_wnd_->SwitchToPeerList(client_->peers());
       } else {
-        DisconnectFromServer();
+        //main_wnd_->SwitchToConnectUI();
       }
       break;
 
@@ -558,12 +561,14 @@ void Conductor::OnSuccess(webrtc::SessionDescriptionInterface* desc) {
     return;
   }
 
-  Json::StyledWriter writer;
-  Json::Value jmessage;
-  jmessage[kSessionDescriptionTypeName] =
-      webrtc::SdpTypeToString(desc->GetType());
-  jmessage[kSessionDescriptionSdpName] = sdp;
-  SendMessage(writer.write(jmessage));
+  char jsonstr[2024];
+  memset(jsonstr, 0, sizeof(jsonstr));
+
+  sprintf(jsonstr, "{\"%s\":\"%s\", \"%s\":\"%s\"}",
+      kSessionDescriptionTypeName, webrtc::SdpTypeToString(desc->GetType()),
+      kSessionDescriptionSdpName, sdp.c_str());
+
+  SendMessage(jsonstr);
 }
 
 void Conductor::OnFailure(webrtc::RTCError error) {

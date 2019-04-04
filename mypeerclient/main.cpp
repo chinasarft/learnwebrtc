@@ -2,6 +2,9 @@
 #include "rtc_base/win32_socket_init.h"
 #include "rtc_base/win32_socket_server.h"
 #endif
+#include "rtc_base/ssl_adapter.h"
+#include "conductor.h"
+
 #include "mainwindow.h"
 #include <QApplication>
 #include "flag_defs.h"
@@ -25,8 +28,18 @@ int main(int argc, char **argv)
     }
 
     QApplication a(argc, argv);
-    MainWindow w;
-    w.show();
+    MainWindow wnd(FLAG_server, FLAG_port, FLAG_autoconnect, FLAG_autocall);
+    wnd.show();
 
-    return a.exec();
+    rtc::InitializeSSL();
+    PeerConnectionClient client;
+    rtc::scoped_refptr<Conductor> conductor(
+        new rtc::RefCountedObject<Conductor>(&client, &wnd));
+
+
+    int ret = a.exec();
+
+    rtc::CleanupSSL();
+
+    return ret;
 }

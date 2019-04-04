@@ -17,14 +17,17 @@ find_package(Qt5Widgets REQUIRED)
 if(NOT Qt5Widgets_FOUND)
 	message(FATAL_ERROR "Failed to find Qt5")
 endif()
+set(CMAKE_AUTOMOC ON)
+include_directories("${Qt5Widgets_INCLUDE_DIRS}")
+message("qtinc:${Qt5Widgets_INCLUDE_DIRS}")
 
 if(WIN32)
 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /source-charset:utf-8")
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /source-charset:utf-8")
+	link_directories("${QTDIR}/lib")
 endif()
 message("=-${CMAKE_CXX_FLAGS_RELEASE}-${CMAKE_CXX_FLAGS_DEBUG}")
 message("=-${CMAKE_C_FLAGS_RELEASE}-${CMAKE_C_FLAGS_DEBUG}")
-#link_directories("${CMAKE_SOURCE_DIR}/deps/lib/x86")
 set(CMAKE_INCLUDE_CURRENT_DIR TRUE)
 
 set(CMAKE_AUTOMOC TRUE)
@@ -34,8 +37,10 @@ set(header_files
 	flag_defs.h
 	defaults.h
 	conductor.h
-	windowstate.h
+	fixjson.h
 	peer_connection_client.h
+	${WEBRTC_INC_PATH}/test/vcm_capturer.h
+	${WEBRTC_INC_PATH}/test/test_video_capturer.h
 )
 
 set(source_files
@@ -43,8 +48,10 @@ set(source_files
 	mainwindow.cpp
 	main.cpp
 	conductor.cpp
-	windowstate.cpp
+	fixjson.cpp
 	peer_connection_client.cpp
+	${WEBRTC_INC_PATH}/test/vcm_capturer.cc
+	${WEBRTC_INC_PATH}/test/test_video_capturer.cc
 )
 
 set(qt_UI
@@ -66,6 +73,7 @@ if(MSVC)
                 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /SAFESEH:NO")
                 set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /SAFESEH:NO")
         endif()
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:msvcrt")
 endif()
 
 	
@@ -76,11 +84,23 @@ elseif(WIN32)
 	ADD_EXECUTABLE(rtcclient WIN32 ${source_files} ${header_files} ${qt_UI_HEADERS} ${qt_QRC_SOURCES})
 endif()
 message("in rtclient:${LINK_LIBS}")
-target_link_libraries(rtcclient
-	Qt5::Widgets
-	webrtc
-	rtc_base
-	${LINK_LIBS}
-)
+if(WIN32)
+	target_link_libraries(rtcclient
+		Qt5Widgets
+		webrtc
+		rtc_base
+		${LINK_LIBS}
+		Qt5Gui
+		Qt5Core
+		qtmain
+	)
+else()
+	target_link_libraries(rtcclient
+		Qt5::Widgets
+		webrtc
+		rtc_base
+		${LINK_LIBS}
+	)
+endif()
 
 #set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT dbt)

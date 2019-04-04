@@ -46,7 +46,7 @@
         <number>0</number>
        </property>
        <item alignment="Qt::AlignVCenter">
-        <widget class="QTextEdit" name="textEdit"/>
+        <widget class="QTextEdit" name="textAddress"/>
        </item>
        <item alignment="Qt::AlignVCenter">
         <widget class="QTextEdit" name="textPort">
@@ -65,7 +65,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QToolButton" name="toolButton">
+        <widget class="QToolButton" name="connectBtn">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -108,7 +108,7 @@
         <number>0</number>
        </property>
        <item>
-        <widget class="QListWidget" name="listWidget">
+        <widget class="QListWidget" name="listPeer">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
            <horstretch>1</horstretch>
@@ -118,7 +118,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="label">
+        <widget class="QLabel" name="video">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>3</horstretch>
