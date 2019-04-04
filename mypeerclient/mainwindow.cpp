@@ -18,12 +18,6 @@ const char MainWindow::kClassName[] = "WebRTC_MainWnd";
 MainWindow::MainWindow(const char* server, int port, bool auto_connect, bool auto_call, QWidget *parent) :
     ui(new Ui::MainWindow),
     ui_(CONNECT_TO_SERVER),
-    edit1_(NULL),
-    edit2_(NULL),
-    label1_(NULL),
-    label2_(NULL),
-    button_(NULL),
-    listbox_(NULL),
     destroyed_(false),
     nested_msg_(NULL),
     callback_(NULL),
@@ -52,14 +46,18 @@ void MainWindow::on_connectBtn_clicked()
     OnDefaultAction();
 }
 
-void MainWindow::on_listPeer_itemClicked(QListWidgetItem *item)
+void MainWindow::on_listPeer_itemDoubleClicked(QListWidgetItem *item)
 {
-
+    if (ui_ == LIST_PEERS) {
+        int peer_id = item->data(Qt::UserRole).toInt();
+        if (peer_id != -1 && callback_) {
+            callback_->ConnectToPeer(peer_id);
+        }
+    }
 }
 
 void MainWindow::on_listPeer_currentRowChanged(int currentRow)
 {
-
 }
 void MainWindow::uiCallbackSlot(int msg_id, void* data) {
     callback_->UIThreadCallback(msg_id, data);
@@ -81,18 +79,6 @@ void MainWindow::OnDefaultAction() {
         int port = port_str.length() ? atoi(port_str.c_str()) : 0;
         callback_->StartLogin(server, port);
     }
-    else if (ui_ == LIST_PEERS) {
-        LRESULT sel = ::SendMessage(listbox_, LB_GETCURSEL, 0, 0);
-        if (sel != LB_ERR) {
-            LRESULT peer_id = ::SendMessage(listbox_, LB_GETITEMDATA, sel, 0);
-            if (peer_id != -1 && callback_) {
-                callback_->ConnectToPeer(peer_id);
-            }
-        }
-    }
-    else {
-        QMessageBox::about(NULL, "error", "ui_ in wrong state");
-    }
 } 
 
 HWND MainWindow::handle() const {
@@ -107,10 +93,19 @@ void MainWindow::RegisterObserver(MainWndCallback* callback) {
 }
 
 void MainWindow::SwitchToPeerList(const Peers& peers) {
+    ui->state->setText("connected");
+    ui->listPeer->clear();
+    int i = 0;
+    ui_ = LIST_PEERS;
+    for (auto iter = peers.begin(); iter != peers.end(); iter++) {
+        ui->listPeer->addItem((*iter).second.c_str());
+        ui->listPeer->item(i++)->setData(Qt::UserRole, (*iter).first);
+    }
     return;
 }
 
 void MainWindow::SwitchToStreamingUI() {
+    ui_ = STREAMING;
     return;
 }
 

@@ -7,7 +7,7 @@ int LinkGetJsonStringByKey(const char *pJson, const char *pKey, char *pBuf, int 
 
     char pKeyWithDoubleQuotation[64];
     memset(pKeyWithDoubleQuotation, 0, sizeof(pKeyWithDoubleQuotation));
-    sprintf("\"%s\"", pKey);
+    sprintf(pKeyWithDoubleQuotation, "\"%s\"", pKey);
     char *pKeyStart = strstr((char *)pJson, pKeyWithDoubleQuotation);
     if (pKeyStart == NULL) {
         return -1;
@@ -34,7 +34,7 @@ int LinkGetJsonIntByKey(const char *pJson, const char *pKey) {
 
     char pKeyWithDoubleQuotation[64];
     memset(pKeyWithDoubleQuotation, 0, sizeof(pKeyWithDoubleQuotation));
-    sprintf("\"%s\"", pKey);
+    sprintf(pKeyWithDoubleQuotation, "\"%s\"", pKey);
     char *pExpireStart = strstr((char *)pJson, pKeyWithDoubleQuotation);
     if (pExpireStart == NULL) {
         return -1;

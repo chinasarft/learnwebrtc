@@ -79,7 +79,7 @@ private slots:
 
     void on_connectBtn_clicked();
 
-    void on_listPeer_itemClicked(QListWidgetItem *item);
+    void on_listPeer_itemDoubleClicked(QListWidgetItem *item);
 
     void on_listPeer_currentRowChanged(int currentRow);
 
@@ -184,12 +184,6 @@ public:
   std::unique_ptr<VideoRenderer> remote_renderer_;
   UI ui_;
   DWORD ui_thread_id_;
-  HWND edit1_;
-  HWND edit2_;
-  HWND label1_;
-  HWND label2_;
-  HWND button_;
-  HWND listbox_;
   bool destroyed_;
   void* nested_msg_;
   MainWndCallback* callback_;

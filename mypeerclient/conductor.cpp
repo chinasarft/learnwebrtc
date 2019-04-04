@@ -230,7 +230,7 @@ void Conductor::OnIceCandidate(const webrtc::IceCandidateInterface* candidate) {
     return;
   }
 
-  char jsonstr[2024];
+  char jsonstr[10240];
   memset(jsonstr, 0, sizeof(jsonstr));
 
   std::string sdp;
@@ -302,7 +302,7 @@ void Conductor::OnMessageFromPeer(int peer_id, const std::string& message) {
 
   std::string json_object;
 
-  char jsonvalue[2048];
+  char jsonvalue[10240];
   memset(jsonvalue, 0, sizeof(jsonvalue));
   int vlen = sizeof(jsonvalue);
   int ret = LinkGetJsonStringByKey(message.c_str(), kSessionDescriptionTypeName, jsonvalue, &vlen);
@@ -561,7 +561,7 @@ void Conductor::OnSuccess(webrtc::SessionDescriptionInterface* desc) {
     return;
   }
 
-  char jsonstr[2024];
+  char jsonstr[10240];
   memset(jsonstr, 0, sizeof(jsonstr));
 
   sprintf(jsonstr, "{\"%s\":\"%s\", \"%s\":\"%s\"}",
