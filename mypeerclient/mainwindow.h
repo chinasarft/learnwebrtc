@@ -6,12 +6,18 @@
 #include "peer_connection_client.h"
 #include "media/base/media_channel.h"
 #include "media/base/video_common.h"
+#include "rtc_base/thread.h"
 #if !defined(WEBRTC_WIN)
 #include <arpa/inet.h>
 #endif  // WEBRTC_WIN
 
 #include <QMainWindow>
 #include <QListWidgetItem>
+
+#ifdef WEBRTC_MAC
+//#include <AppKit/NSView.h>
+#define HWND void*
+#endif
 
 namespace Ui {
 class MainWindow;
@@ -88,13 +94,9 @@ private:
 
 public:
     static const char kClassName[];
-    enum WindowMessages {
-        UI_THREAD_CALLBACK = WM_APP + 1,
-    };
 
   bool Create();
   bool Destroy();
-  bool PreTranslateMessage(MSG* msg);
 
   virtual void RegisterObserver(MainWndCallback* callback);
   virtual void SwitchToPeerList(const Peers& peers);
@@ -119,14 +121,15 @@ public:
                   webrtc::VideoTrackInterface* track_to_render);
     virtual ~VideoRenderer();
 
-    void Lock() { ::EnterCriticalSection(&buffer_lock_); }
+    void Lock() { buffer_lock_.Enter(); }
 
-    void Unlock() { ::LeaveCriticalSection(&buffer_lock_); }
+    void Unlock() { buffer_lock_.Leave(); }
 
     // VideoSinkInterface implementation
     void OnFrame(const webrtc::VideoFrame& frame) override;
-
+#ifdef WEBRTC_WIN
     const BITMAPINFO& bmi() const { return bmi_; }
+#endif
     const uint8_t* image() const { return image_.get(); }
 
    protected:
@@ -138,9 +141,11 @@ public:
     };
 
     HWND wnd_;
+#ifdef WEBRTC_WIN
     BITMAPINFO bmi_;
+#endif
     std::unique_ptr<uint8_t[]> image_;
-    CRITICAL_SECTION buffer_lock_;
+    rtc::CriticalSection buffer_lock_;
     rtc::scoped_refptr<webrtc::VideoTrackInterface> rendered_track_;
   };
 
@@ -170,10 +175,6 @@ public:
 
   void OnDefaultAction();
 
-  bool OnMessage(UINT msg, WPARAM wp, LPARAM lp, LRESULT* result);
-
-  static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
-
   void LayoutConnectUI(bool show);
   void LayoutPeerListUI(bool show);
 
@@ -183,11 +184,10 @@ public:
   std::unique_ptr<VideoRenderer> local_renderer_;
   std::unique_ptr<VideoRenderer> remote_renderer_;
   UI ui_;
-  DWORD ui_thread_id_;
+  rtc::PlatformThreadId ui_thread_id_;
   bool destroyed_;
   void* nested_msg_;
   MainWndCallback* callback_;
-  static ATOM wnd_class_;
   std::string server_;
   std::string port_;
   bool auto_connect_;

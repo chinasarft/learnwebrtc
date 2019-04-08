@@ -501,6 +501,6 @@ void PeerConnectionClient::OnClose(rtc::AsyncSocket* socket, int err) {
 }
 
 void PeerConnectionClient::OnMessage(rtc::Message* msg) {
-  // ignore msg; there is currently only one supported message ("retry")
-  DoConnect();
+        // ignore msg; there is currently only one supported message ("retry")
+        DoConnect();
 }

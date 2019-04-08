@@ -65,8 +65,7 @@ class PeerConnectionClient : public sigslot::has_slots<>,
   bool IsSendingMessage();
 
   bool SignOut();
-
-  // implements the MessageHandler interface
+  //implements the MessageHandler interface
   void OnMessage(rtc::Message* msg);
 
  protected:

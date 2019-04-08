@@ -12,7 +12,6 @@
 #include <QMessageBox>
 
 
-ATOM MainWindow::wnd_class_ = 0;
 const char MainWindow::kClassName[] = "WebRTC_MainWnd";
 
 MainWindow::MainWindow(const char* server, int port, bool auto_connect, bool auto_call, QWidget *parent) :
@@ -65,7 +64,7 @@ void MainWindow::uiCallbackSlot(int msg_id, void* data) {
 
 bool MainWindow::Create() {
 
-    ui_thread_id_ = ::GetCurrentThreadId();
+    ui_thread_id_ = rtc::CurrentThreadId();
 
     return true;
 }
@@ -142,7 +141,7 @@ MainWindow::VideoRenderer::VideoRenderer(
     int height,
     webrtc::VideoTrackInterface* track_to_render)
     : wnd_(wnd), rendered_track_(track_to_render) {
-  ::InitializeCriticalSection(&buffer_lock_);
+#ifdef WEBRTC_WIN
   ZeroMemory(&bmi_, sizeof(bmi_));
   bmi_.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
   bmi_.bmiHeader.biPlanes = 1;
@@ -152,17 +151,17 @@ MainWindow::VideoRenderer::VideoRenderer(
   bmi_.bmiHeader.biHeight = -height;
   bmi_.bmiHeader.biSizeImage =
       width * height * (bmi_.bmiHeader.biBitCount >> 3);
+#endif
   rendered_track_->AddOrUpdateSink(this, rtc::VideoSinkWants());
 }
 
 MainWindow::VideoRenderer::~VideoRenderer() {
   rendered_track_->RemoveSink(this);
-  ::DeleteCriticalSection(&buffer_lock_);
 }
 
 void MainWindow::VideoRenderer::SetSize(int width, int height) {
   AutoLock<VideoRenderer> lock(this);
-
+#ifdef WEBRTC_WIN
   if (width == bmi_.bmiHeader.biWidth && height == bmi_.bmiHeader.biHeight) {
     return;
   }
@@ -172,9 +171,11 @@ void MainWindow::VideoRenderer::SetSize(int width, int height) {
   bmi_.bmiHeader.biSizeImage =
       width * height * (bmi_.bmiHeader.biBitCount >> 3);
   image_.reset(new uint8_t[bmi_.bmiHeader.biSizeImage]);
+#endif
 }
 
 void MainWindow::VideoRenderer::OnFrame(const webrtc::VideoFrame& video_frame) {
+#ifdef WEBRTC_WIN
   {
     AutoLock<VideoRenderer> lock(this);
 
@@ -194,4 +195,5 @@ void MainWindow::VideoRenderer::OnFrame(const webrtc::VideoFrame& video_frame) {
                        buffer->width(), buffer->height());
   }
   InvalidateRect(wnd_, NULL, TRUE);
+#endif
 }

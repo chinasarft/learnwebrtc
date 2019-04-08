@@ -11,13 +11,15 @@ else()
 endif()
 
 if (APPLE)
+    set(CMAKE_CXX_STANDARD 11) #add_definitions(-std=c++11)
     # -fno-rtti 禁止运行时类型信息 不加会出现某些包含纯虚函数的类 undefine reference 暂时也没搞懂原因
     add_compile_options(-fno-rtti)
+    add_compile_options(-fno-exceptions)
 
     add_definitions(-DWEBRTC_POSIX)
     add_definitions(-DWEBRTC_MAC)
 elseif(WIN32)
-	add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
+    add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
     add_definitions(-DWEBRTC_WIN)
     add_definitions(-DWIN32_LEAN_AND_MEAN)
     add_definitions(-DNOMINMAX)
@@ -50,7 +52,10 @@ endif()
 
 if (APPLE)
     set(CMAKE_EXE_LINKER_FLAGS
-                "-framework Foundation -framework AudioToolbox -framework VideoToolbox -framework CoreGraphics -framework QuartzCore -framework CoreFoundation -framework CoreMedia -framework Security")
+	    #"-nostdlib++ -ObjC -stdlib=libc++ -framework AudioToolbox -framework VideoToolbox -framework QuartzCore -framework CoreGraphics -framework CoreAudio -framework CoreMedia -framework AvFoundation -framework Security -framework Foundation -framework CoreFoundation")
+	    #"-nostdlib++ -stdlib=libc++ -framework AudioToolbox -framework VideoToolbox -framework QuartzCore -framework CoreGraphics -framework CoreAudio -framework CoreMedia -framework AvFoundation -framework Security -framework Foundation -framework CoreFoundation")
+	    #"-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk/ -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk/usr/lib -nostdlib++ -stdlib=libc++ -lc++ -lc++abi -framework AudioToolbox -framework VideoToolbox -framework QuartzCore -framework CoreGraphics -framework CoreAudio -framework CoreMedia -framework AvFoundation -framework Security -framework Foundation -framework CoreFoundation")
+	    "-framework AudioToolbox -framework VideoToolbox -framework QuartzCore -framework CoreGraphics -framework CoreAudio -framework CoreMedia -framework AvFoundation -framework Security -framework Foundation -framework CoreFoundation")
 elseif(WIN32)
     set(LINK_LIBS
 	advapi32
