@@ -133,9 +133,6 @@ public:
 
     // VideoSinkInterface implementation
     void OnFrame(const webrtc::VideoFrame& frame) override;
-#ifdef WEBRTC_WIN
-    const BITMAPINFO& bmi() const { return bmi_; }
-#endif
     const uint8_t* image() const { return image_.get(); }
 
    protected:
@@ -147,9 +144,8 @@ public:
     };
 
     HWND wnd_;
-#ifdef WEBRTC_WIN
-    BITMAPINFO bmi_;
-#endif
+    int width_ = 0;
+    int height_ = 0;
     std::unique_ptr<uint8_t[]> image_;
     rtc::CriticalSection buffer_lock_;
     rtc::scoped_refptr<webrtc::VideoTrackInterface> rendered_track_;

@@ -50,6 +50,10 @@ void MainWindow::getFrameSlot(QImage img) {
 
 void MainWindow::paintEvent(QPaintEvent *event)
 {
+    /*
+    实际上peerconnection_client这里是通过local_render_和remote_render_获取到frame和，在这里进行合帧的
+    然后渲染的(还是gdi来渲染的), 所以为了demo演示，这里也使用效率差的pixmap来做
+    */
     if (image_.size().width() <= 0) return;
     ui->video->setPixmap(QPixmap::fromImage(image_));
 }
@@ -160,17 +164,6 @@ MainWindow::VideoRenderer::VideoRenderer(
     int height,
     webrtc::VideoTrackInterface* track_to_render)
     : wnd_(wnd), rendered_track_(track_to_render) {
-#ifdef WEBRTC_WIN
-  ZeroMemory(&bmi_, sizeof(bmi_));
-  bmi_.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-  bmi_.bmiHeader.biPlanes = 1;
-  bmi_.bmiHeader.biBitCount = 32;
-  bmi_.bmiHeader.biCompression = BI_RGB;
-  bmi_.bmiHeader.biWidth = width;
-  bmi_.bmiHeader.biHeight = -height;
-  bmi_.bmiHeader.biSizeImage =
-      width * height * (bmi_.bmiHeader.biBitCount >> 3);
-#endif
   rendered_track_->AddOrUpdateSink(this, rtc::VideoSinkWants());
 }
 
@@ -180,22 +173,16 @@ MainWindow::VideoRenderer::~VideoRenderer() {
 
 void MainWindow::VideoRenderer::SetSize(int width, int height) {
   AutoLock<VideoRenderer> lock(this);
-#ifdef WEBRTC_WIN
-  if (width == bmi_.bmiHeader.biWidth && height == bmi_.bmiHeader.biHeight) {
+  if (width == width_ && height == height_) {
     return;
   }
-
-  bmi_.bmiHeader.biWidth = width;
-  bmi_.bmiHeader.biHeight = -height;
-  bmi_.bmiHeader.biSizeImage =
-      width * height * (bmi_.bmiHeader.biBitCount >> 3);
-  image_.reset(new uint8_t[bmi_.bmiHeader.biSizeImage]);
-#endif
+  width_ = width;
+  height_ = height;
+  int biSizeImage = width * height * 4;
+  image_.reset(new uint8_t[biSizeImage]);
 }
 
 void MainWindow::VideoRenderer::OnFrame(const webrtc::VideoFrame& video_frame) {
-#ifdef WEBRTC_WIN
-  {
     AutoLock<VideoRenderer> lock(this);
 
     rtc::scoped_refptr<webrtc::I420BufferInterface> buffer(
@@ -210,12 +197,9 @@ void MainWindow::VideoRenderer::OnFrame(const webrtc::VideoFrame& video_frame) {
     libyuv::I420ToARGB(buffer->DataY(), buffer->StrideY(), buffer->DataU(),
                        buffer->StrideU(), buffer->DataV(), buffer->StrideV(),
                        image_.get(),
-                       bmi_.bmiHeader.biWidth * bmi_.bmiHeader.biBitCount / 8,
+                       width_ * 4,
                        buffer->width(), buffer->height());
     QImage tmpImg((uchar *)(image_.get()), buffer->width(), buffer->height(), QImage::Format_ARGB32);
+    // TODO 这里一次copy
     draw(tmpImg.copy());
-  }
-
-  InvalidateRect(wnd_, NULL, TRUE);
-#endif
 }
