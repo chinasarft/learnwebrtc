@@ -10,9 +10,15 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QMessageBox>
-
+#include <QPainter>
+#include <QPoint>
 
 const char MainWindow::kClassName[] = "WebRTC_MainWnd";
+MainWindow *mainWindow;
+
+void draw(QImage img) {
+    emit mainWindow->getFrameSig(img);
+};
 
 MainWindow::MainWindow(const char* server, int port, bool auto_connect, bool auto_call, QWidget *parent) :
     ui(new Ui::MainWindow),
@@ -26,13 +32,26 @@ MainWindow::MainWindow(const char* server, int port, bool auto_connect, bool aut
 
     ui->setupUi(this);
     ui->textAddress->setText("localhost");
+    ui->textAddress->setText("100.100.62.17");
 
     char buffer[10];
     snprintf(buffer, sizeof(buffer), "%i", port);
     ui->textPort->setText(buffer);
     port_ = buffer;
-
+    mainWindow = this;
     connect(this, &MainWindow::uiCallbackSig, this, &MainWindow::uiCallbackSlot, Qt::QueuedConnection);
+    connect(this, &MainWindow::getFrameSig, this, &MainWindow::getFrameSlot, Qt::QueuedConnection);
+}
+
+void MainWindow::getFrameSlot(QImage img) {
+    image_ = img;
+    update();
+}
+
+void MainWindow::paintEvent(QPaintEvent *event)
+{
+    if (image_.size().width() <= 0) return;
+    ui->video->setPixmap(QPixmap::fromImage(image_));
 }
 
 MainWindow::~MainWindow()
@@ -187,13 +206,16 @@ void MainWindow::VideoRenderer::OnFrame(const webrtc::VideoFrame& video_frame) {
 
     SetSize(buffer->width(), buffer->height());
 
-    RTC_DCHECK(image_.get() != NULL);
+    //RTC_DCHECK(image_.get() != NULL);
     libyuv::I420ToARGB(buffer->DataY(), buffer->StrideY(), buffer->DataU(),
                        buffer->StrideU(), buffer->DataV(), buffer->StrideV(),
                        image_.get(),
                        bmi_.bmiHeader.biWidth * bmi_.bmiHeader.biBitCount / 8,
                        buffer->width(), buffer->height());
+    QImage tmpImg((uchar *)(image_.get()), buffer->width(), buffer->height(), QImage::Format_ARGB32);
+    draw(tmpImg.copy());
   }
+
   InvalidateRect(wnd_, NULL, TRUE);
 #endif
 }

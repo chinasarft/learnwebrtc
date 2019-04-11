@@ -13,6 +13,7 @@
 
 #include <QMainWindow>
 #include <QListWidgetItem>
+#include <QImage>
 
 #ifdef WEBRTC_MAC
 //#include <AppKit/NSView.h>
@@ -75,13 +76,17 @@ public:
     explicit MainWindow(const char* server, int port, bool auto_connect, bool auto_call, QWidget *parent = nullptr);
     ~MainWindow();
 
+protected:
+    void paintEvent(QPaintEvent *event);
+
 signals:
     void uiCallbackSig(int msg_id, void* data);
-
+    void getFrameSig(QImage img);
 
 
 private slots:
     void uiCallbackSlot(int msg_id, void* data);
+    void getFrameSlot(QImage img);
 
     void on_connectBtn_clicked();
 
@@ -90,6 +95,7 @@ private slots:
     void on_listPeer_currentRowChanged(int currentRow);
 
 private:
+    QImage image_;
     Ui::MainWindow *ui;
 
 public:
@@ -174,11 +180,6 @@ public:
   void OnDestroyed();
 
   void OnDefaultAction();
-
-  void LayoutConnectUI(bool show);
-  void LayoutPeerListUI(bool show);
-
-  void HandleTabbing();
 
  private:
   std::unique_ptr<VideoRenderer> local_renderer_;

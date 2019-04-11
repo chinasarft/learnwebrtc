@@ -238,7 +238,16 @@ void Conductor::OnIceCandidate(const webrtc::IceCandidateInterface* candidate) {
     RTC_LOG(LS_ERROR) << "Failed to serialize candidate";
     return;
   }
-  sprintf(jsonstr, "{\"%s\":\"%s\", \"%s\":%d, \"%s\":\"%s\"}",kCandidateSdpMidName, candidate->sdp_mid().c_str(),
+
+  std::string::size_type pos = 0;
+  std::string srcStr = "\r\n";
+  std::string dstStr = "\\r\\n";
+  while ((pos = sdp.find(srcStr, pos)) != std::string::npos) {
+      sdp.replace(pos, srcStr.length(), dstStr);
+      pos += dstStr.length();
+  }
+
+  snprintf(jsonstr, sizeof(jsonstr), "{\"%s\":\"%s\", \"%s\":%d, \"%s\":\"%s\"}",kCandidateSdpMidName, candidate->sdp_mid().c_str(),
       kCandidateSdpMlineIndexName, candidate->sdp_mline_index(),
       kCandidateSdpName, sdp.c_str());
   SendMessage(jsonstr);
@@ -309,7 +318,10 @@ void Conductor::OnMessageFromPeer(int peer_id, const std::string& message) {
   std::string type_str;
   if (ret == 0 )
     type_str = jsonvalue;
+  else
+    RTC_LOG(WARNING) << "get json fail"<<ret;
   memset(jsonvalue, 0, sizeof(jsonvalue));
+  vlen = sizeof(jsonvalue);
 
   if (!type_str.empty()) {
     if (type_str == "offer-loopback") {
@@ -331,9 +343,19 @@ void Conductor::OnMessageFromPeer(int peer_id, const std::string& message) {
     webrtc::SdpType type = *type_maybe;
     std::string sdp;
     ret = LinkGetJsonStringByKey(message.c_str(), kSessionDescriptionSdpName, jsonvalue, &vlen);
-    if (ret == 0)
+    if (ret == 0) {
         sdp = jsonvalue;
+        std::string::size_type pos = 0;
+        std::string srcStr = "\\r\\n";
+        std::string dstStr = "\r\n";
+        while ((pos = sdp.find(srcStr, pos)) != std::string::npos) {
+            sdp.replace(pos, srcStr.length(), dstStr);
+            pos += dstStr.length();
+        }
+    } else
+        RTC_LOG(WARNING) << "get json fail";
     memset(jsonvalue, 0, sizeof(jsonvalue));
+    vlen = sizeof(jsonvalue);
     if (sdp.empty()) {
       RTC_LOG(WARNING) << "Can't parse received session description message.";
       return;
@@ -362,7 +384,11 @@ void Conductor::OnMessageFromPeer(int peer_id, const std::string& message) {
     ret = LinkGetJsonStringByKey(message.c_str(), kCandidateSdpMidName, jsonvalue, &vlen);
     if (ret == 0)
         sdp_mid = jsonvalue;
+    else
+        RTC_LOG(WARNING) << "get json fail";
     memset(jsonvalue, 0, sizeof(jsonvalue));
+    vlen = sizeof(jsonvalue);
+
 
     sdp_mlineindex = LinkGetJsonIntByKey(message.c_str(), kCandidateSdpMlineIndexName);
 
@@ -370,6 +396,7 @@ void Conductor::OnMessageFromPeer(int peer_id, const std::string& message) {
     if (ret == 0)
         sdp = jsonvalue;
     memset(jsonvalue, 0, sizeof(jsonvalue));
+    vlen = sizeof(jsonvalue);
 
     if (sdp_mlineindex < 0 || sdp.empty() || sdp_mid.empty()) {
       RTC_LOG(WARNING) << "Can't parse received message.";
@@ -494,14 +521,16 @@ void Conductor::UIThreadCallback(int msg_id, void* data) {
       break;
 
     case SEND_MESSAGE_TO_PEER: {
-      RTC_LOG(INFO) << "SEND_MESSAGE_TO_PEER";
       std::string* msg = reinterpret_cast<std::string*>(data);
       if (msg) {
+      RTC_LOG(INFO) << "SEND_MESSAGE_TO_PEER"<<*(reinterpret_cast<std::string*>(data));
         // For convenience, we always run the message through the queue.
         // This way we can be sure that messages are sent to the server
         // in the same order they were signaled without much hassle.
         pending_messages_.push_back(msg);
       }
+      else
+          RTC_LOG(INFO) << "SEND_MESSAGE_TO_PEER";
 
       if (!pending_messages_.empty() && !client_->IsSendingMessage()) {
         msg = pending_messages_.front();
@@ -564,7 +593,15 @@ void Conductor::OnSuccess(webrtc::SessionDescriptionInterface* desc) {
   char jsonstr[10240];
   memset(jsonstr, 0, sizeof(jsonstr));
 
-  sprintf(jsonstr, "{\"%s\":\"%s\", \"%s\":\"%s\"}",
+  std::string::size_type pos = 0;
+  std::string srcStr = "\r\n";
+  std::string dstStr = "\\r\\n";
+  while ((pos = sdp.find(srcStr, pos)) != std::string::npos) {
+      sdp.replace(pos, srcStr.length(), dstStr);
+      pos += dstStr.length();
+  }
+
+  snprintf(jsonstr, sizeof(jsonstr), "{\"%s\":\"%s\", \"%s\":\"%s\"}",
       kSessionDescriptionTypeName, webrtc::SdpTypeToString(desc->GetType()),
       kSessionDescriptionSdpName, sdp.c_str());
 

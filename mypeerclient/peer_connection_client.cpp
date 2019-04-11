@@ -380,6 +380,7 @@ void PeerConnectionClient::OnHangingGetRead(rtc::AsyncSocket* socket) {
         ParseServerResponse(notification_data_, content_length, &peer_id, &eoh);
 
     if (ok) {
+        RTC_LOG(INFO) << __FUNCTION__<<notification_data_<<"\n";
       // Store the position where the body begins.
       size_t pos = eoh + 4;
 
