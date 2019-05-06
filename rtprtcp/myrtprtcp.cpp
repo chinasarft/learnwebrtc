@@ -1,3 +1,4 @@
+#include "myrtprtcp.h"
 #include <map>
 #include <memory>
 #include <set>
@@ -24,11 +25,23 @@
 using namespace webrtc;
 using namespace rtc;
 
-
 const uint32_t kSenderSsrc = 0x12345;
 const uint32_t kReceiverSsrc = 0x23456;
 const int64_t kOneWayNetworkDelayMs = 100;
 const uint16_t kSequenceNumber = 100;
+
+#include "api/transport/webrtc_key_value_config.h"
+#include "api/transport/field_trial_based_config.h"
+#include "system_wrappers/include/field_trial.h"
+class MyFieldTrialBasedConfig : public WebRtcKeyValueConfig {
+public:
+        std::string Lookup(absl::string_view key) const override;
+};
+std::string MyFieldTrialBasedConfig::Lookup(absl::string_view key) const {
+        return field_trial::FindFullName(std::string(key));
+}
+
+
 
 class RtcpRttStatsTestImpl : public RtcpRttStats {
 public:
@@ -40,9 +53,10 @@ public:
         int64_t rtt_ms_;
 };
 
-class SendTransport : public Transport, public RtpData {
+class SendTransport : public Transport {
 public:
-        SendTransport():
+        SendTransport()
+        : receiver_(nullptr),
         clock_(nullptr),
         delay_ms_(0),
         rtp_packets_sent_(0),
@@ -50,43 +64,23 @@ public:
         keepalive_payload_type_(0),
         num_keepalive_sent_(0) {}
         
-        ~SendTransport() {
-                if (pSock)
-                        delete pSock;
-        }
-        
-        //127.0.0.1:11001
-        bool Init(std::string ipandport, std::string remoteIpAndPort) {
-                if (!remoteAddr.FromString(remoteIpAndPort)) {
-                        return false;
-                }
-                pSock = Thread::Current()->socketserver()->CreateSocket(AF_INET, SOCK_DGRAM);
-                SocketAddress addr;
-                addr.FromString(ipandport);
-                return pSock->Bind(addr);
-        }
-        
+        void SetRtpRtcpModule(ModuleRtpRtcpImpl* receiver) { receiver_ = receiver; }
         void SimulateNetworkDelay(int64_t delay_ms, SimulatedClock* clock) {
                 clock_ = clock;
                 delay_ms_ = delay_ms;
         }
-        
         bool SendRtp(const uint8_t* data,
                      size_t len,
                      const PacketOptions& options) override {
                 RTPHeader header;
                 std::unique_ptr<RtpHeaderParser> parser(RtpHeaderParser::Create());
-                assert(parser->Parse(static_cast<const uint8_t*>(data), len, &header) == true);
+                assert(parser->Parse(static_cast<const uint8_t*>(data), len, &header));
                 ++rtp_packets_sent_;
                 if (header.payloadType == keepalive_payload_type_)
                         ++num_keepalive_sent_;
                 last_rtp_header_ = header;
-                
-                pSock->SendTo(data, len, remoteAddr);
-                
                 return true;
         }
-        
         bool SendRtcp(const uint8_t* data, size_t len) override {
                 test::RtcpPacketParser parser;
                 parser.Parse(data, len);
@@ -95,24 +89,17 @@ public:
                 if (clock_) {
                         clock_->AdvanceTimeMilliseconds(delay_ms_);
                 }
-              
+                assert(receiver_);
+                receiver_->IncomingRtcpPacket(data, len);
                 ++rtcp_packets_sent_;
-                
-                pSock->SendTo(data, len, remoteAddr);
-                
                 return true;
-        }
-        int32_t OnReceivedPayloadData(const uint8_t* payload_data,
-                                      size_t payload_size,
-                                      const WebRtcRTPHeader* rtp_header) override {
-                std::cout<<"OnReceivedPayloadData receive:"<<payload_size<<std::endl;
-                return 0;
         }
         void SetKeepalivePayloadType(uint8_t payload_type) {
                 keepalive_payload_type_ = payload_type;
         }
         size_t NumKeepaliveSent() { return num_keepalive_sent_; }
         size_t NumRtcpSent() { return rtcp_packets_sent_; }
+        ModuleRtpRtcpImpl* receiver_;
         SimulatedClock* clock_;
         int64_t delay_ms_;
         int rtp_packets_sent_;
@@ -121,9 +108,6 @@ public:
         std::vector<uint16_t> last_nack_list_;
         uint8_t keepalive_payload_type_;
         size_t num_keepalive_sent_;
-        Socket* pSock = nullptr;
-        SocketAddress remoteAddr;
-        
 };
 
 class RtpRtcpModule : public RtcpPacketTypeCounterObserver {
@@ -144,7 +128,7 @@ public:
         std::unique_ptr<ModuleRtpRtcpImpl> impl_;
         uint32_t remote_ssrc_;
         RtpKeepAliveConfig keepalive_config_;
-        RtcpIntervalConfig rtcp_interval_config_;
+        int rtcp_report_interval_ms_ = 0;
         
         void SetRemoteSsrc(uint32_t ssrc) {
                 remote_ssrc_ = ssrc;
@@ -179,8 +163,8 @@ public:
                 CreateModuleImpl();
                 transport_.SetKeepalivePayloadType(config.payload_type);
         }
-        void SetRtcpIntervalConfigAndReset(const RtcpIntervalConfig& config) {
-                rtcp_interval_config_ = config;
+        void SetRtcpReportIntervalAndReset(int rtcp_report_interval_ms) {
+                rtcp_report_interval_ms_ = rtcp_report_interval_ms;
                 CreateModuleImpl();
         }
         
@@ -194,7 +178,7 @@ private:
                 config.rtcp_packet_type_counter_observer = this;
                 config.rtt_stats = &rtt_stats_;
                 config.keepalive_config = keepalive_config_;
-                config.rtcp_interval_config = rtcp_interval_config_;
+                config.rtcp_report_interval_ms = rtcp_report_interval_ms_;
                 
                 impl_.reset(new ModuleRtpRtcpImpl(config));
                 impl_->SetRTCPStatus(RtcpMode::kCompound);
@@ -204,37 +188,53 @@ private:
         std::map<uint32_t, RtcpPacketTypeCounter> counter_map_;
 };
 
-class RtpRtcpImplTest {
-protected:
-        RtpRtcpImplTest()
-        : clock_(os_gettime_ms()), rtpRtcpModule_(&clock_) {}
+class RtpRtcpWebrtcImpl {
+public:
+        RtpRtcpWebrtcImpl()
+        : clock_(133590000000000), sender_(&clock_), receiver_(&clock_) {}
         
-        void SetUp(uint32_t ssrc, std::string localIpPort, std::string remoteIpPort) {
+        void SetUp() /*override*/ {
                 // Send module.
-                rtpRtcpModule_.impl_->SetSSRC(ssrc);
-                assert(0 == rtpRtcpModule_.impl_->SetSendingStatus(true));
-                rtpRtcpModule_.impl_->SetSendingMediaStatus(true);
-                //rtpRtcpModule_.impl_->SetStorePacketsStatus(true, 100);
+                sender_.impl_->SetSSRC(kSenderSsrc);
+                assert(0 == sender_.impl_->SetSendingStatus(true));
+                sender_.impl_->SetSendingMediaStatus(true);
+                sender_.SetRemoteSsrc(kReceiverSsrc);
+                sender_.impl_->SetSequenceNumber(kSequenceNumber);
+                sender_.impl_->SetStorePacketsStatus(true, 100);
+                
+                sender_video_ = absl::make_unique<RTPSenderVideo>(
+                                                                  &clock_, sender_.impl_->RtpSender(), nullptr, &playout_delay_oracle_,
+                                                                  nullptr, false, MyFieldTrialBasedConfig());
                 
                 memset(&codec_, 0, sizeof(VideoCodec));
-                codec_.plType = 96;
+                codec_.plType = 100;
                 codec_.width = 320;
                 codec_.height = 180;
-                rtpRtcpModule_.impl_->RegisterVideoSendPayload(codec_.plType, "H264");
-            
-                assert(rtpRtcpModule_.transport_.Init(localIpPort, remoteIpPort) == 0);
+                sender_video_->RegisterPayloadType(codec_.plType, "VP8");
+                
+                // Receive module.
+                assert(0 == receiver_.impl_->SetSendingStatus(false));
+                receiver_.impl_->SetSendingMediaStatus(false);
+                receiver_.impl_->SetSSRC(kReceiverSsrc);
+                receiver_.SetRemoteSsrc(kSenderSsrc);
+                // Transport settings.
+                sender_.transport_.SetRtpRtcpModule(receiver_.impl_.get());
+                receiver_.transport_.SetRtpRtcpModule(sender_.impl_.get());
         }
         
         SimulatedClock clock_;
-        RtpRtcpModule rtpRtcpModule_;
+        PlayoutDelayOracle playout_delay_oracle_;
+        RtpRtcpModule sender_;
+        std::unique_ptr<RTPSenderVideo> sender_video_;
+        std::unique_ptr<RTPSenderAudio> sender_audio_;
+        RtpRtcpModule receiver_;
         VideoCodec codec_;
-public:
-        void SendFrame(const RtpRtcpModule* module, uint8_t *payload, int payloadLen, int64_t timestamp, int nIsKeyFrame) {
-                RTPVideoHeaderH264 h264_header = {};
-                h264_header.nalu_type = 5;
-                h264_header.packetization_type = kH264FuA;
-                
-                
+        
+        void SendFrame(const RtpRtcpModule* module,
+                       RTPSenderVideo* sender,
+                       uint8_t tid) {
+                RTPVideoHeaderVP8 vp8_header = {};
+                vp8_header.temporalIdx = tid;
                 RTPVideoHeader rtp_video_header;
                 rtp_video_header.width = codec_.width;
                 rtp_video_header.height = codec_.height;
@@ -243,25 +243,15 @@ public:
                 rtp_video_header.playout_delay = {-1, -1};
                 rtp_video_header.is_first_packet_in_frame = true;
                 rtp_video_header.simulcastIdx = 0;
-                rtp_video_header.codec = kVideoCodecH264;
-                rtp_video_header.video_type_header = h264_header;
+                rtp_video_header.codec = kVideoCodecVP8;
+                rtp_video_header.video_type_header = vp8_header;
                 rtp_video_header.video_timing = {0u, 0u, 0u, 0u, 0u, 0u, false};
                 
-                
-                //https://blog.csdn.net/u013113491/article/details/80285342 RTPFragmentationHeader
-                //的作用大改就是吧关键帧的sps pps sei等分开，但是这里需要自己去找startcode分开
-                RTPFragmentationHeader fragmentation;
-                fragmentation.VerifyAndAllocateFragmentationHeader(1);
-                fragmentation.fragmentationOffset[0] = 0;
-                fragmentation.fragmentationLength[0] = payloadLen;
-                fragmentation.fragmentationPlType[0] = 0;
-                fragmentation.fragmentationTimeDiff[0] = 0;
-                        
-                        
-                
-                assert(true == module->impl_->SendOutgoingData(
-                                                                kVideoFrameKey, codec_.plType, 0, 0, payload,
-                                                                sizeof(payload), &fragmentation, &rtp_video_header, nullptr));
+                const uint8_t payload[100] = {0};
+                assert(module->impl_->OnSendingRtpFrame(0, 0, codec_.plType, true));
+                assert(sender->SendVideo(kVideoFrameKey, codec_.plType, 0, 0, payload,
+                                         sizeof(payload), nullptr, &rtp_video_header,
+                                         0));
         }
         
         void IncomingRtcpNack(const RtpRtcpModule* module, uint16_t sequence_number) {
@@ -278,69 +268,10 @@ public:
         }
 };
 
-class RtpRtcpImplTestMain : public RtpRtcpImplTest {
-public:
-        void testBody() {
-                SetUp();
-                
-                rtpRtcpModule_.impl_->SetSelectiveRetransmissions(kRetransmitBaseLayer);
-                assert(kRetransmitBaseLayer == rtpRtcpModule_.impl_->SelectiveRetransmissions());
-                
-                // Send frames.
-                assert(0 == rtpRtcpModule_.RtpSent());
-                SendFrame(&rtpRtcpModule_, kBaseLayerTid);    // kSequenceNumber
-                SendFrame(&rtpRtcpModule_, kHigherLayerTid);  // kSequenceNumber + 1
-                SendFrame(&rtpRtcpModule_, kNoTemporalIdx);   // kSequenceNumber + 2
-                assert(6 == rtpRtcpModule_.RtpSent());
-                assert(kSequenceNumber + 5 == rtpRtcpModule_.LastRtpSequenceNumber());
-                
-                // Min required delay until retransmit = 5 + RTT ms (RTT = 0).
-                clock_.AdvanceTimeMilliseconds(5);
-                
-                // Frame with kBaseLayerTid re-sent.
-                IncomingRtcpNack(&rtpRtcpModule_, kSequenceNumber);
-                assert(4 == rtpRtcpModule_.RtpSent());
-                assert(kSequenceNumber == rtpRtcpModule_.LastRtpSequenceNumber());
-                // Frame with kHigherLayerTid not re-sent.
-                IncomingRtcpNack(&rtpRtcpModule_, kSequenceNumber + 1);
-                assert(4 == rtpRtcpModule_.RtpSent());
-                // Frame with kNoTemporalIdx re-sent.
-                IncomingRtcpNack(&rtpRtcpModule_, kSequenceNumber + 2);
-                assert(5 == rtpRtcpModule_.RtpSent());
-                assert(kSequenceNumber + 2 == rtpRtcpModule_.LastRtpSequenceNumber());
-        }
-};
-
-static void *gpSimVReader;
-
-int avDataCallback(void *opaque, void *pData, int nDataLen, TToolAvType avType, int64_t timestamp, int nIsKeyFrame) {
-        RtpRtcpImplTest* testimpl = (RtpRtcpImplTest*)opaque;
-        testimpl->SendFrame(testimpl->rtpRtcpModule_, (uint8_t*)pData, nDataLen, timestamp, nIsKeyFrame);
+RtpRtcpImpl::RtpRtcpImpl() {
+        rtpRtcpImpl_ = absl::make_unique<RtpRtcpWebrtcImpl>();
 }
 
-static void start_read_avfile(void *pCbOpaque) {
-        TToolReadArg arg;
-        memset(&arg, 0, sizeof(arg));
-        arg.IsLoop = 1;
-        arg.codec = TTOOL_VIDEO_H264;
-        arg.pFilePath = "/Users/liuye/qbox/linking/link/libtsuploader/pcdemo/material/h265_aac_1_16000_h264.h264";
-        arg.callback = avDataCallback;
-        arg.pCbOpaque = pCbOpaque;
-        int ret = TToolStartRead(&arg, &gpSimVReader);
-        if (ret != 0) {
-                fprintf(stderr, "TToolStartRead v fail:%d\n", ret);
-                exit(1);
-        }
+int main() {
+        RtpRtcpImpl r;
 }
-
-
-int main(int argc, char **argv) {
-        //RtpRtcpImplTestMain test;
-        //test.testBody();
-        //testUdpSocket();
-        auto t = Thread::Create();
-        t->socketserver();
-        Thread::CreateWithSocketServer();
-}
-
-        
