@@ -13,6 +13,8 @@
 #include "modules/rtp_rtcp/source/rtcp_packet/nack.h"
 #include "modules/rtp_rtcp/source/rtp_packet_received.h"
 #include "modules/rtp_rtcp/source/rtp_rtcp_impl.h"
+#include "modules/rtp_rtcp/source/rtp_sender_video.h"
+#include "modules/rtp_rtcp/source/rtp_sender_audio.h"
 #include "rtc_base/rate_limiter.h"
 #include "rtc_base/thread.h"
 #include "rtc_base/socket.h"
@@ -60,9 +62,7 @@ public:
         clock_(nullptr),
         delay_ms_(0),
         rtp_packets_sent_(0),
-        rtcp_packets_sent_(0),
-        keepalive_payload_type_(0),
-        num_keepalive_sent_(0) {}
+        rtcp_packets_sent_(0) {}
         
         void SetRtpRtcpModule(ModuleRtpRtcpImpl* receiver) { receiver_ = receiver; }
         void SimulateNetworkDelay(int64_t delay_ms, SimulatedClock* clock) {
@@ -76,8 +76,6 @@ public:
                 std::unique_ptr<RtpHeaderParser> parser(RtpHeaderParser::Create());
                 assert(parser->Parse(static_cast<const uint8_t*>(data), len, &header));
                 ++rtp_packets_sent_;
-                if (header.payloadType == keepalive_payload_type_)
-                        ++num_keepalive_sent_;
                 last_rtp_header_ = header;
                 return true;
         }
@@ -94,10 +92,6 @@ public:
                 ++rtcp_packets_sent_;
                 return true;
         }
-        void SetKeepalivePayloadType(uint8_t payload_type) {
-                keepalive_payload_type_ = payload_type;
-        }
-        size_t NumKeepaliveSent() { return num_keepalive_sent_; }
         size_t NumRtcpSent() { return rtcp_packets_sent_; }
         ModuleRtpRtcpImpl* receiver_;
         SimulatedClock* clock_;
@@ -106,8 +100,6 @@ public:
         size_t rtcp_packets_sent_;
         RTPHeader last_rtp_header_;
         std::vector<uint16_t> last_nack_list_;
-        uint8_t keepalive_payload_type_;
-        size_t num_keepalive_sent_;
 };
 
 class RtpRtcpModule : public RtcpPacketTypeCounterObserver {
@@ -127,7 +119,6 @@ public:
         RtcpRttStatsTestImpl rtt_stats_;
         std::unique_ptr<ModuleRtpRtcpImpl> impl_;
         uint32_t remote_ssrc_;
-        RtpKeepAliveConfig keepalive_config_;
         int rtcp_report_interval_ms_ = 0;
         
         void SetRemoteSsrc(uint32_t ssrc) {
@@ -157,12 +148,6 @@ public:
         std::vector<uint16_t> LastNackListSent() {
                 return transport_.last_nack_list_;
         }
-        void SetKeepaliveConfigAndReset(const RtpKeepAliveConfig& config) {
-                keepalive_config_ = config;
-                // Need to create a new module impl, since it's configured at creation.
-                CreateModuleImpl();
-                transport_.SetKeepalivePayloadType(config.payload_type);
-        }
         void SetRtcpReportIntervalAndReset(int rtcp_report_interval_ms) {
                 rtcp_report_interval_ms_ = rtcp_report_interval_ms;
                 CreateModuleImpl();
@@ -177,7 +162,6 @@ private:
                 config.receive_statistics = receive_statistics_.get();
                 config.rtcp_packet_type_counter_observer = this;
                 config.rtt_stats = &rtt_stats_;
-                config.keepalive_config = keepalive_config_;
                 config.rtcp_report_interval_ms = rtcp_report_interval_ms_;
                 
                 impl_.reset(new ModuleRtpRtcpImpl(config));
@@ -249,9 +233,9 @@ public:
                 
                 const uint8_t payload[100] = {0};
                 assert(module->impl_->OnSendingRtpFrame(0, 0, codec_.plType, true));
-                assert(sender->SendVideo(kVideoFrameKey, codec_.plType, 0, 0, payload,
-                                         sizeof(payload), nullptr, &rtp_video_header,
-                                         0));
+                assert(sender->SendVideo(VideoFrameType::kVideoFrameKey, codec_.plType,
+                                         0, 0, payload, sizeof(payload), nullptr,
+                                         &rtp_video_header, 0));
         }
         
         void IncomingRtcpNack(const RtpRtcpModule* module, uint16_t sequence_number) {

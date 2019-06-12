@@ -5,6 +5,8 @@ if (WEBRTC_LIB_PATH)
     link_directories("${WEBRTC_LIB_PATH}/obj")
     link_directories("${WEBRTC_LIB_PATH}/obj/rtc_base")
     link_directories("${WEBRTC_LIB_PATH}/obj/modules/rtp_rtcp")
+    #link_directories("${WEBRTC_LIB_PATH}/obj/modules/audio_processing")
+    #link_directories("${WEBRTC_LIB_PATH}/obj/common_audio")
 #link_directories("${WEBRTC_LIB_PATH}/obj/testing/gtest")
 #link_directories("${WEBRTC_LIB_PATH}/obj/third_party/googletest")
 else()
@@ -94,6 +96,7 @@ elseif(WIN32)
 endif()
 
 add_subdirectory(mypeerclient)
+add_subdirectory(webrtcaudio)
 add_subdirectory(rtprtcp)
 
 set(SOURCE_FILES rtp_rtcp_impl_unittest.cc
