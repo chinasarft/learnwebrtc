@@ -191,6 +191,7 @@ void runrtcbasetest_thread_wrap() {
 void webrtc_thread_invoke() {
   // Create and start the thread.
   auto thread = Thread::CreateWithSocketServer();
+  thread->SetName("thread_invoke_test", nullptr);
   thread->Start();
   // Try calling functors.
   assert(42 == thread->Invoke<int>(RTC_FROM_HERE, FunctorA()));
@@ -279,9 +280,9 @@ int webrtc_messagequeue_test() {
   MsgHandler handler;
 
   Message* msg = new Message();
-  msg->message_id = 0;
-  msg->pdata = &data;
-  msg->phandler = &handler;
+  //msg->message_id = 0;
+  //msg->pdata = &data;
+  //msg->phandler = &handler;
 
   mysocket* m_socket = new mysocket();
   MessageQueue queue(m_socket, true);
@@ -295,7 +296,8 @@ int webrtc_messagequeue_test() {
   output1_int64("post delay msg:%lld\n", TimeMillis());
   queue.PostDelayed(locate, 20000, &handler);
   queue.Get(msg);
-  queue.GetDelay();
+  output1_int64("after get msg:%lld\n", TimeMillis());
+  output1_int64("get delay:%lld\n", (int64_t)queue.GetDelay());
   output1_int64("get delay msg:%lld\n", TimeMillis());
 
   return 0;
@@ -382,9 +384,9 @@ void webrtc_test_asyncresolver() {
 //--------------------for test end---------------------
 
 int main() {
-  webrtc_thread_invoke();
-  webrtc_messagequeue_test();
+  //webrtc_thread_invoke();
+  //webrtc_messagequeue_test();
   webrtc_test_thread_run();
-  webrtc_test_asyncresolver();
+  //webrtc_test_asyncresolver();
   return 0;
 }
