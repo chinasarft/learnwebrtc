@@ -96,6 +96,7 @@ elseif(WIN32)
 endif()
 
 add_subdirectory(mypeerclient)
+add_subdirectory(myrtcdemo)
 add_subdirectory(webrtcaudio)
 add_subdirectory(rtprtcp)
 
