@@ -221,7 +221,9 @@ void Conductor::OnRemoveTrack(
 }
 
 void Conductor::OnIceCandidate(const webrtc::IceCandidateInterface* candidate) {
-  RTC_LOG(INFO) << __FUNCTION__ << " " << candidate->sdp_mline_index();
+  std::string candidateStr;
+  candidate->ToString(&candidateStr);
+  RTC_LOG(INFO) <<"mylog:"<< __FUNCTION__ << " " << candidate->sdp_mline_index()<<candidateStr;
   // For loopback test. To save some connecting delay.
   if (loopback_) {
     if (!peer_connection_->AddIceCandidate(candidate)) {
@@ -292,6 +294,7 @@ void Conductor::OnMessageFromPeer(int peer_id, const std::string& message) {
   RTC_DCHECK(peer_id_ == peer_id || peer_id_ == -1);
   RTC_DCHECK(!message.empty());
 
+  RTC_LOG(WARNING) << "mylog:OnMessageFromPeer:" << message;
   if (!peer_connection_.get()) {
     RTC_DCHECK(peer_id_ == -1);
     peer_id_ = peer_id;
@@ -523,14 +526,14 @@ void Conductor::UIThreadCallback(int msg_id, void* data) {
     case SEND_MESSAGE_TO_PEER: {
       std::string* msg = reinterpret_cast<std::string*>(data);
       if (msg) {
-      RTC_LOG(INFO) << "SEND_MESSAGE_TO_PEER"<<*(reinterpret_cast<std::string*>(data));
+      RTC_LOG(INFO) << "mylog:SEND_MESSAGE_TO_PEER"<<*(reinterpret_cast<std::string*>(data));
         // For convenience, we always run the message through the queue.
         // This way we can be sure that messages are sent to the server
         // in the same order they were signaled without much hassle.
         pending_messages_.push_back(msg);
       }
       else
-          RTC_LOG(INFO) << "SEND_MESSAGE_TO_PEER";
+          RTC_LOG(INFO) << "mylog:SEND_MESSAGE_TO_PEER";
 
       if (!pending_messages_.empty() && !client_->IsSendingMessage()) {
         msg = pending_messages_.front();
@@ -579,6 +582,7 @@ void Conductor::OnSuccess(webrtc::SessionDescriptionInterface* desc) {
   std::string sdp;
   desc->ToString(&sdp);
 
+  RTC_LOG(LERROR) << "mylog:createsdp:" <<sdp;
   // For loopback test. To save some connecting delay.
   if (loopback_) {
     // Replace message type from "offer" to "answer"

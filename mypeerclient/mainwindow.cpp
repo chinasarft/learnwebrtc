@@ -32,7 +32,7 @@ MainWindow::MainWindow(const char* server, int port, bool auto_connect, bool aut
 
     ui->setupUi(this);
     ui->textAddress->setText("localhost");
-    ui->textAddress->setText("100.100.62.17");
+    ui->textAddress->setText("127.0.0.1");
 
     char buffer[10];
     snprintf(buffer, sizeof(buffer), "%i", port);
@@ -96,15 +96,18 @@ void MainWindow::OnDefaultAction() {
     if (!callback_)
         return;
     if (ui_ == CONNECT_TO_SERVER) {
-        std::string server = ui->textAddress->toPlainText().toStdString();
-        std::string port_str = ui->textPort->toPlainText().toStdString();
+		std::string server = std::string((const char*)ui->textAddress->toPlainText().toLocal8Bit().constData());
+		std::string port_str = std::string((const char*)ui->textPort->toPlainText().toLocal8Bit().constData());
         int port = port_str.length() ? atoi(port_str.c_str()) : 0;
         callback_->StartLogin(server, port);
     }
 } 
 
-HWND MainWindow::handle() const {
+HWND MainWindow::localHandle() const {
     return (HWND)(ui->video->winId());
+}
+HWND MainWindow::remote1Handle() const {
+    return (HWND)(ui->video1->winId());
 }
 void MainWindow::MessageBox(const char* caption, const char* text, bool is_error) {
     QMessageBox::about(NULL, caption, text);
@@ -132,7 +135,7 @@ void MainWindow::SwitchToStreamingUI() {
 }
 
 void MainWindow::StartLocalRenderer(webrtc::VideoTrackInterface* local_video) {
-  local_renderer_.reset(new VideoRenderer(handle(), 1, 1, local_video));
+  local_renderer_.reset(new VideoRenderer(localHandle(), 1, 1, local_video));
 }
 
 void MainWindow::StopLocalRenderer() {
@@ -140,7 +143,7 @@ void MainWindow::StopLocalRenderer() {
 }
 
 void MainWindow::StartRemoteRenderer(webrtc::VideoTrackInterface* remote_video) {
-  remote_renderer_.reset(new VideoRenderer(handle(), 1, 1, remote_video));
+  remote_renderer_.reset(new VideoRenderer(remote1Handle(), 1, 1, remote_video));
 }
 
 void MainWindow::StopRemoteRenderer() {

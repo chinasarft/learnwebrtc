@@ -117,7 +117,8 @@ public:
 
   virtual void QueueUIThreadCallback(int msg_id, void* data);
 
-  HWND handle() const;
+  HWND localHandle() const;
+  HWND remote1Handle() const;
 
   class VideoRenderer : public rtc::VideoSinkInterface<webrtc::VideoFrame> {
    public:
