@@ -28,7 +28,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->setupUi(this);
     ui->textAddress->setText("localhost");
-    ui->textAddress->setText("127.0.0.1");
+    //ui->textAddress->setText("127.0.0.1");
+    ui->textAddress->setText("10.93.245.95");
 
     port_ = "8888";
     ui->textPort->setText(port_.c_str());

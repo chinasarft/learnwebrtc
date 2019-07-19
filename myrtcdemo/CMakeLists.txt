@@ -76,6 +76,8 @@ if(MSVC)
 endif()
 
 	
+        list(APPEND header_files socket_notifier.h)
+        list(APPEND source_files socket_notifier.cpp)
 if (APPLE)
 	ADD_EXECUTABLE(myrtcdemo ${source_files} ${header_files} ${qt_UI_HEADERS} ${qt_QRC_SOURCES})
 	#set_target_properties(myrtcdemo PROPERTIES MACOSX_BUNDLE_INFO_PLIST MacOSXBundleInfo.plist.in)

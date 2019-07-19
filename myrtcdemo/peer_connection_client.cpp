@@ -14,6 +14,7 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/net_helpers.h"
+#include "socket_notifier.h"
 
 #ifdef WIN32
 #include "rtc_base/win32_socket_server.h"
@@ -32,9 +33,7 @@ rtc::AsyncSocket* CreateClientSocket(int family) {
   sock->CreateT(family, SOCK_STREAM);
   return sock;
 #elif defined(WEBRTC_POSIX)
-  rtc::Thread* thread = rtc::Thread::Current();
-  RTC_DCHECK(thread != NULL);
-  return thread->socketserver()->CreateAsyncSocket(family, SOCK_STREAM);
+  return new AsyncTcpSocketDispatcher(family);
 #else
 #error Platform not supported.
 #endif
