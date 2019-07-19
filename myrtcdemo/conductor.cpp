@@ -110,6 +110,14 @@ Conductor::Conductor(PeerConnectionClient* client, MainWindow* main_wnd)
     : peer_id_(-1), loopback_(false), client_(client), main_wnd_(main_wnd) {
   client_->RegisterObserver(this);
   main_wnd->RegisterObserver(this);
+
+
+  if (!InitializePeerConnection()) {
+	  RTC_LOG(LS_ERROR) << "Failed to initialize our PeerConnection instance";
+  }
+  else {
+	  isCreatedPc_ = true;
+  }
 }
 
 Conductor::~Conductor() {
@@ -223,7 +231,7 @@ void Conductor::OnRemoveTrack(
 void Conductor::OnIceCandidate(const webrtc::IceCandidateInterface* candidate) {
   std::string candidateStr;
   candidate->ToString(&candidateStr);
-  RTC_LOG(INFO) <<"mylog:"<< __FUNCTION__ << " " << candidate->sdp_mline_index()<<candidateStr;
+  //RTC_LOG(INFO) <<"mylog:"<< __FUNCTION__ << " " << candidate->sdp_mline_index()<<candidateStr;
   // For loopback test. To save some connecting delay.
   if (loopback_) {
     if (!peer_connection_->AddIceCandidate(candidate)) {
@@ -295,15 +303,9 @@ void Conductor::OnMessageFromPeer(int peer_id, const std::string& message) {
   RTC_DCHECK(!message.empty());
 
   RTC_LOG(WARNING) << "mylog:OnMessageFromPeer:" << message;
-  if (!peer_connection_.get()) {
-    RTC_DCHECK(peer_id_ == -1);
+  if (peer_id_ == -1) {
     peer_id_ = peer_id;
-
-    if (!InitializePeerConnection()) {
-      RTC_LOG(LS_ERROR) << "Failed to initialize our PeerConnection instance";
-      client_->SignOut();
-      return;
-    }
+    client_->SignOut();
   } else if (peer_id != peer_id_) {
     RTC_DCHECK(peer_id_ != -1);
     RTC_LOG(WARNING)
@@ -321,8 +323,6 @@ void Conductor::OnMessageFromPeer(int peer_id, const std::string& message) {
   std::string type_str;
   if (ret == 0 )
     type_str = jsonvalue;
-  else
-    RTC_LOG(WARNING) << "get json fail"<<ret;
   memset(jsonvalue, 0, sizeof(jsonvalue));
   vlen = sizeof(jsonvalue);
 
@@ -451,13 +451,7 @@ void Conductor::ConnectToPeer(int peer_id) {
   RTC_DCHECK(peer_id_ == -1);
   RTC_DCHECK(peer_id != -1);
 
-  if (peer_connection_.get()) {
-    main_wnd_->MessageBox(
-        "Error", "We only support connecting to one peer at a time", true);
-    return;
-  }
-
-  if (InitializePeerConnection()) {
+  if (isCreatedPc_) {
     peer_id_ = peer_id;
     peer_connection_->CreateOffer(
         this, webrtc::PeerConnectionInterface::RTCOfferAnswerOptions());
@@ -483,6 +477,7 @@ void Conductor::AddTracks() {
 
   rtc::scoped_refptr<CapturerTrackSource> video_device =
       CapturerTrackSource::Create();
+  
   if (video_device) {
     rtc::scoped_refptr<webrtc::VideoTrackInterface> video_track_(
         peer_connection_factory_->CreateVideoTrack(kVideoLabel, video_device));
@@ -582,7 +577,7 @@ void Conductor::OnSuccess(webrtc::SessionDescriptionInterface* desc) {
   std::string sdp;
   desc->ToString(&sdp);
 
-  RTC_LOG(LERROR) << "mylog:createsdp:" <<sdp;
+  //RTC_LOG(LERROR) << "mylog:createsdp:" <<sdp;
   // For loopback test. To save some connecting delay.
   if (loopback_) {
     // Replace message type from "offer" to "answer"

@@ -120,7 +120,7 @@ void MainWindow::SwitchToPeerList(const Peers& peers) {
 }
 
 void MainWindow::SwitchToStreamingUI() {
-    ui_ = STREAMING;
+    //ui_ = STREAMING;
     return;
 }
 
