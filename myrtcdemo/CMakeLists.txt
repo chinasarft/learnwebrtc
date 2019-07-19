@@ -78,6 +78,8 @@ endif()
 	
 if (APPLE)
 	ADD_EXECUTABLE(myrtcdemo ${source_files} ${header_files} ${qt_UI_HEADERS} ${qt_QRC_SOURCES})
+	#set_target_properties(myrtcdemo PROPERTIES MACOSX_BUNDLE_INFO_PLIST MacOSXBundleInfo.plist.in)
+	set_target_properties(myrtcdemo PROPERTIES MACOSX_BUNDLE TRUE MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist)
 elseif(WIN32)
 	#ADD_EXECUTABLE(myrtcdemo WIN32 ${source_files} ${header_files} ${qt_UI_HEADERS} ${qt_QRC_SOURCES} dbxt.rc)
 	ADD_EXECUTABLE(myrtcdemo WIN32 ${source_files} ${header_files} ${qt_UI_HEADERS} ${qt_QRC_SOURCES})
