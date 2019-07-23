@@ -52,13 +52,19 @@ void MainWindow::paintEvent(QPaintEvent *event)
     实际上peerconnection_client这里是通过local_render_和remote_render_获取到frame和，在这里进行合帧的
     然后渲染的(还是gdi来渲染的), 所以为了demo演示，这里也使用效率差的pixmap来做
     */
-    if (image_.size().width() <= 0) return;
-    QPainter painter(&remoteImage_);
-    painter.drawImage(0, 0, image_);
-    if (remoteImage_.isNull())
-      ui->video->setPixmap(QPixmap::fromImage(image_));
-    else
-      ui->video->setPixmap(QPixmap::fromImage(remoteImage_));
+    if (image_.size().width() <= 0)
+        return;
+    if (!remoteImage_.isNull()) {
+        QPainter painter(&remoteImage_); // if remoteImage_ is null. will print
+        //QPainter::begin: Paint device returned engine == 0, type: 3 all the time
+        painter.drawImage(0, 0, image_);
+        if (remoteImage_.isNull())
+          ui->video->setPixmap(QPixmap::fromImage(image_));
+        else
+          ui->video->setPixmap(QPixmap::fromImage(remoteImage_));
+    } else {
+        ui->video->setPixmap(QPixmap::fromImage(image_));
+    }
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -92,8 +98,8 @@ void MainWindow::on_audioSwitch_clicked() {
         else
             RTC_LOG(LERROR) << "errorlog:remove audio track";
     } else {
-        ui->audioSwitch->setText("mute audio");
         callback_->AddLocalAudioTrack();
+        ui->audioSwitch->setText("mute audio");
     }
 }
 
@@ -105,6 +111,7 @@ void MainWindow::on_videoSwitch_clicked() {
              RTC_LOG(LERROR) << "errorlog:remove video track";
     } else {
         callback_->AddLocalVideoTrack();
+        ui->videoSwitch->setText("mute video");
     }
 }
 
