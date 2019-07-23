@@ -14,6 +14,7 @@
 #include <QMainWindow>
 #include <QListWidgetItem>
 #include <QImage>
+#include <vector>
 
 #ifdef WEBRTC_MAC
 //#include <AppKit/NSView.h>
@@ -81,12 +82,12 @@ protected:
 
 signals:
     void uiCallbackSig(int msg_id, void* data);
-    void getFrameSig(QImage img);
+    void getFrameSig(QImage img, bool isLocal);
 
 
 private slots:
     void uiCallbackSlot(int msg_id, void* data);
-    void getFrameSlot(QImage img);
+    void getFrameSlot(QImage img, bool isLocal);
 
     void on_connectBtn_clicked();
 
@@ -96,6 +97,7 @@ private slots:
 
 private:
     QImage image_;
+    QImage remoteImage_;
     Ui::MainWindow *ui;
 
 public:
@@ -118,13 +120,10 @@ public:
   virtual void QueueUIThreadCallback(int msg_id, void* data);
 
   HWND localHandle() const;
-  HWND remote1Handle() const;
 
   class VideoRenderer : public rtc::VideoSinkInterface<webrtc::VideoFrame> {
    public:
-    VideoRenderer(HWND wnd,
-                  int width,
-                  int height,
+    VideoRenderer(bool isLocal,
                   webrtc::VideoTrackInterface* track_to_render);
     virtual ~VideoRenderer();
 
@@ -134,7 +133,7 @@ public:
 
     // VideoSinkInterface implementation
     void OnFrame(const webrtc::VideoFrame& frame) override;
-    const uint8_t* image() const { return image_.get(); }
+    const uint8_t* image() const { return imageBuf_.data(); }
 
    protected:
     void SetSize(int width, int height);
@@ -144,10 +143,10 @@ public:
       RENDER_FRAME,
     };
 
-    HWND wnd_;
+    bool isLocal_;
     int width_ = 0;
     int height_ = 0;
-    std::unique_ptr<uint8_t[]> image_;
+    std::vector<uint8_t> imageBuf_;
     rtc::CriticalSection buffer_lock_;
     rtc::scoped_refptr<webrtc::VideoTrackInterface> rendered_track_;
   };

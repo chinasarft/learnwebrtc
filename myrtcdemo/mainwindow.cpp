@@ -16,8 +16,8 @@
 const char MainWindow::kClassName[] = "WebRTC_MainWnd";
 MainWindow *mainWindow;
 
-void draw(QImage img) {
-    emit mainWindow->getFrameSig(img);
+void draw(QImage&& img, bool isLocal) {
+    emit mainWindow->getFrameSig(std::forward<QImage>(img), isLocal);
 };
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -38,8 +38,11 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::getFrameSig, this, &MainWindow::getFrameSlot, Qt::QueuedConnection);
 }
 
-void MainWindow::getFrameSlot(QImage img) {
-    image_ = img;
+void MainWindow::getFrameSlot(QImage img, bool isLocal) {
+    if (isLocal)
+        image_ = img;
+    else
+        remoteImage_ = img;
     update();
 }
 
@@ -50,7 +53,12 @@ void MainWindow::paintEvent(QPaintEvent *event)
     然后渲染的(还是gdi来渲染的), 所以为了demo演示，这里也使用效率差的pixmap来做
     */
     if (image_.size().width() <= 0) return;
-    ui->video->setPixmap(QPixmap::fromImage(image_));
+    QPainter painter(&remoteImage_);
+    painter.drawImage(0, 0, image_);
+    if (remoteImage_.isNull())
+      ui->video->setPixmap(QPixmap::fromImage(image_));
+    else
+      ui->video->setPixmap(QPixmap::fromImage(remoteImage_));
 }
 
 MainWindow::~MainWindow()
@@ -97,9 +105,7 @@ bool MainWindow::Create() {
 HWND MainWindow::localHandle() const {
     return (HWND)(ui->video->winId());
 }
-HWND MainWindow::remote1Handle() const {
-    return (HWND)(ui->video1->winId());
-}
+
 void MainWindow::MessageBox(const char* caption, const char* text, bool is_error) {
     QMessageBox::about(NULL, caption, text);
 }
@@ -126,7 +132,7 @@ void MainWindow::SwitchToStreamingUI() {
 }
 
 void MainWindow::StartLocalRenderer(webrtc::VideoTrackInterface* local_video) {
-  local_renderer_.reset(new VideoRenderer(localHandle(), 1, 1, local_video));
+  local_renderer_.reset(new VideoRenderer(true, local_video));
 }
 
 void MainWindow::StopLocalRenderer() {
@@ -134,7 +140,7 @@ void MainWindow::StopLocalRenderer() {
 }
 
 void MainWindow::StartRemoteRenderer(webrtc::VideoTrackInterface* remote_video) {
-  remote_renderer_.reset(new VideoRenderer(remote1Handle(), 1, 1, remote_video));
+  remote_renderer_.reset(new VideoRenderer(false, remote_video));
 }
 
 void MainWindow::StopRemoteRenderer() {
@@ -153,11 +159,9 @@ void MainWindow::QueueUIThreadCallback(int msg_id, void* data) {
 //
 
 MainWindow::VideoRenderer::VideoRenderer(
-    HWND wnd,
-    int width,
-    int height,
+    bool isLocal,
     webrtc::VideoTrackInterface* track_to_render)
-    : wnd_(wnd), rendered_track_(track_to_render) {
+    : isLocal_(isLocal), rendered_track_(track_to_render) {
   rendered_track_->AddOrUpdateSink(this, rtc::VideoSinkWants());
 }
 
@@ -173,7 +177,8 @@ void MainWindow::VideoRenderer::SetSize(int width, int height) {
   width_ = width;
   height_ = height;
   int biSizeImage = width * height * 4;
-  image_.reset(new uint8_t[biSizeImage]);
+  if (biSizeImage > imageBuf_.size())
+    imageBuf_.resize(biSizeImage);
 }
 
 void MainWindow::VideoRenderer::OnFrame(const webrtc::VideoFrame& video_frame) {
@@ -190,10 +195,13 @@ void MainWindow::VideoRenderer::OnFrame(const webrtc::VideoFrame& video_frame) {
     //RTC_DCHECK(image_.get() != NULL);
     libyuv::I420ToARGB(buffer->DataY(), buffer->StrideY(), buffer->DataU(),
                        buffer->StrideU(), buffer->DataV(), buffer->StrideV(),
-                       image_.get(),
+                       imageBuf_.data(),
                        width_ * 4,
                        buffer->width(), buffer->height());
-    QImage tmpImg((uchar *)(image_.get()), buffer->width(), buffer->height(), QImage::Format_ARGB32);
+    QImage tmpImg((uchar *)(imageBuf_.data()), buffer->width(), buffer->height(), QImage::Format_ARGB32);
     // TODO 这里一次copy
-    draw(tmpImg.copy());
+    if (isLocal_) {
+        tmpImg = tmpImg.scaled(320, 180);
+    }
+    draw(std::move(tmpImg), isLocal_);
 }
