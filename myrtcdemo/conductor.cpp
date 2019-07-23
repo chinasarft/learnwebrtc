@@ -43,6 +43,9 @@
 #include "rtc_base/rtc_certificate_generator.h"
 #include "fixjson.h"
 #include "test/vcm_capturer.h"
+#ifndef WIN32
+#include "socket_notifier.h"
+#endif
 
 namespace {
 // Names used for a IceCandidate JSON object.
@@ -136,16 +139,32 @@ void Conductor::Close() {
 bool Conductor::InitializePeerConnection() {
   RTC_DCHECK(!peer_connection_factory_);
   RTC_DCHECK(!peer_connection_);
-
+#ifndef WIN32
+   SignalHandler::GetSignalHandler()->Invoke<int>(
+        RTC_FROM_HERE,
+        [this](){
+            fprintf(stderr, "my_signal_thread:%p\n", pthread_self());
+            peer_connection_factory_ = webrtc::CreatePeerConnectionFactory(
+                nullptr /* network_thread */, nullptr /* worker_thread */,
+                SignalHandler::GetSignalHandler() /* signaling_thread */, nullptr /* default_adm */,
+                webrtc::CreateBuiltinAudioEncoderFactory(),
+                webrtc::CreateBuiltinAudioDecoderFactory(),
+                webrtc::CreateBuiltinVideoEncoderFactory(),
+                webrtc::CreateBuiltinVideoDecoderFactory(), nullptr /* audio_mixer */,
+                nullptr /* audio_processing */);
+              return 0;
+        }
+    );
+#else
   peer_connection_factory_ = webrtc::CreatePeerConnectionFactory(
       nullptr /* network_thread */, nullptr /* worker_thread */,
-      nullptr /* signaling_thread */, nullptr /* default_adm */,
+      SocketNotifier::GetSocketNotifier()->GetThreadPtr() /* signaling_thread */, nullptr /* default_adm */,
       webrtc::CreateBuiltinAudioEncoderFactory(),
       webrtc::CreateBuiltinAudioDecoderFactory(),
       webrtc::CreateBuiltinVideoEncoderFactory(),
       webrtc::CreateBuiltinVideoDecoderFactory(), nullptr /* audio_mixer */,
       nullptr /* audio_processing */);
-
+#endif
   if (!peer_connection_factory_) {
     main_wnd_->MessageBox("Error", "Failed to initialize PeerConnectionFactory",
                           true);
@@ -305,7 +324,6 @@ void Conductor::OnMessageFromPeer(int peer_id, const std::string& message) {
   RTC_LOG(WARNING) << "mylog:OnMessageFromPeer:" << message;
   if (peer_id_ == -1) {
     peer_id_ = peer_id;
-    client_->SignOut();
   } else if (peer_id != peer_id_) {
     RTC_DCHECK(peer_id_ != -1);
     RTC_LOG(WARNING)
@@ -608,7 +626,11 @@ void Conductor::OnSuccess(webrtc::SessionDescriptionInterface* desc) {
 }
 
 void Conductor::OnFailure(webrtc::RTCError error) {
-  RTC_LOG(LERROR) << ToString(error.type()) << ": " << error.message();
+  RTC_LOG(LERROR) << "createoffer" << ToString(error.type()) << ": " << error.message();
+}
+
+void Conductor::OnFailure(const std::string& error) {
+    RTC_LOG(LERROR) << "createoffer" << ": " << error;
 }
 
 void Conductor::SendMessage(const std::string& json_object) {

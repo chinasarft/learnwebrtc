@@ -115,6 +115,7 @@ class Conductor : public webrtc::PeerConnectionObserver,
   // CreateSessionDescriptionObserver implementation.
   void OnSuccess(webrtc::SessionDescriptionInterface* desc) override;
   void OnFailure(webrtc::RTCError error) override;
+  void OnFailure(const std::string& error) override;
 
  protected:
   // Send a message to the remote peer.

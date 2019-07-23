@@ -221,6 +221,7 @@ bool PeerConnectionClient::ConnectControlSocket() {
     Close();
     return false;
   }
+
   return true;
 }
 

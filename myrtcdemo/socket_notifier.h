@@ -2,10 +2,15 @@
 #include "rtc_base/thread.h"
 #include "rtc_base/async_socket.h"
 #include "rtc_base/physical_socket_server.h"
+#include "rtc_base/socket_address.h"
 
 class AsyncTcpSocketDispatcher : public rtc::SocketDispatcher {
 public:
 	explicit AsyncTcpSocketDispatcher(int family);
+    int Connect(const rtc::SocketAddress& addr) override;
+
+private:
+    int family_;
 };
 
 class SocketNotifier {
@@ -14,6 +19,7 @@ public:
     
     void AddSyncSocket(rtc::Dispatcher* pDispatcher);
     rtc::PhysicalSocketServer* GetSocketServer();
+    rtc::Thread* GetThreadPtr() const;
 
 private:
     SocketNotifier();
@@ -21,4 +27,14 @@ private:
     std::shared_ptr<rtc::Thread> thread_;
 };
 
+
+// signal
+class SignalHandler : public rtc::Thread{
+public:
+    static SignalHandler* GetSignalHandler();
+    
+private:
+    SignalHandler();
+    std::shared_ptr<rtc::SocketServer> ss_;
+};
 
