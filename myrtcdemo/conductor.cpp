@@ -43,7 +43,7 @@
 #include "rtc_base/rtc_certificate_generator.h"
 #include "fixjson.h"
 #include "test/vcm_capturer.h"
-#ifndef WIN32
+#ifndef USE_WIN32
 #include "socket_notifier.h"
 #endif
 
@@ -139,11 +139,10 @@ void Conductor::Close() {
 bool Conductor::InitializePeerConnection() {
   RTC_DCHECK(!peer_connection_factory_);
   RTC_DCHECK(!peer_connection_);
-#ifndef WIN32
+#ifndef USE_WIN32
    SignalHandler::GetSignalHandler()->Invoke<int>(
         RTC_FROM_HERE,
         [this](){
-            fprintf(stderr, "my_signal_thread:%p\n", pthread_self());
             peer_connection_factory_ = webrtc::CreatePeerConnectionFactory(
                 nullptr /* network_thread */, nullptr /* worker_thread */,
                 SignalHandler::GetSignalHandler() /* signaling_thread */, nullptr /* default_adm */,

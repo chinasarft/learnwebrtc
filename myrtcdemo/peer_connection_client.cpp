@@ -16,7 +16,7 @@
 #include "rtc_base/net_helpers.h"
 #include "socket_notifier.h"
 
-#ifdef WIN32
+#ifdef USE_WIN32
 #include "rtc_base/win32_socket_server.h"
 #endif
 
@@ -28,14 +28,12 @@ const char kByeMessage[] = "BYE";
 const int kReconnectDelay = 2000;
 
 rtc::AsyncSocket* CreateClientSocket(int family) {
-#ifdef WIN32
+#ifdef USE_WIN32
   rtc::Win32Socket* sock = new rtc::Win32Socket();
   sock->CreateT(family, SOCK_STREAM);
   return sock;
-#elif defined(WEBRTC_POSIX)
-  return new AsyncTcpSocketDispatcher(family);
 #else
-#error Platform not supported.
+  return new AsyncTcpSocketDispatcher(family);
 #endif
 }
 

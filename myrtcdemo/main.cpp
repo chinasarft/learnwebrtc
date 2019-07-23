@@ -8,7 +8,7 @@
 #include "mainwindow.h"
 #include <QApplication>
 
-#ifndef WIN32
+#ifndef USE_WIN32
 #include "socket_notifier.h"
 #endif
 
@@ -17,13 +17,17 @@ int main(int argc, char **argv)
 {
 #ifdef WIN32
     rtc::WinsockInitializer winsock_init;
+#endif
+#ifdef USE_WIN32
     rtc::Win32SocketServer w32_ss;
     rtc::Win32Thread w32_thread(&w32_ss);
     rtc::ThreadManager::Instance()->SetCurrentThread(&w32_thread);
 #else
     SocketNotifier::GetSocketNotifier();
     SignalHandler::GetSignalHandler();
-    fprintf(stderr, "main thread id:%p\n", pthread_self());
+#endif
+#ifndef WIN32
+	fprintf(stderr, "main thread id:%p\n", pthread_self());
 #endif
 
     QApplication a(argc, argv);
