@@ -79,6 +79,7 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *event);
+    void closeEvent(QCloseEvent *event);
 
 signals:
     void uiCallbackSig(int msg_id, void* data);

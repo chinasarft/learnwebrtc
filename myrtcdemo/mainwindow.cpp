@@ -61,6 +61,13 @@ void MainWindow::paintEvent(QPaintEvent *event)
       ui->video->setPixmap(QPixmap::fromImage(remoteImage_));
 }
 
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    // TODO
+    if (callback_)
+        callback_->Close();
+}
+
 MainWindow::~MainWindow()
 {
     delete ui;
