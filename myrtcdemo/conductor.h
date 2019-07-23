@@ -57,6 +57,8 @@ class Conductor : public webrtc::PeerConnectionObserver,
   void DeletePeerConnection();
   void EnsureStreamingUI();
   void AddTracks();
+  void AddAudioTrack();
+  void AddVideoTrack();
 
   //
   // PeerConnectionObserver implementation.
@@ -68,6 +70,7 @@ class Conductor : public webrtc::PeerConnectionObserver,
       rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver,
       const std::vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>>&
           streams) override;
+  virtual void OnAddStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream);
   void OnRemoveTrack(
       rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) override;
   void OnDataChannel(
@@ -111,6 +114,11 @@ class Conductor : public webrtc::PeerConnectionObserver,
   void DisconnectFromCurrentPeer() override;
 
   void UIThreadCallback(int msg_id, void* data) override;
+                      
+  virtual bool RemoveLocalAudioTrack() override;
+  virtual bool RemoveLocalVideoTrack() override;
+  virtual void AddLocalAudioTrack() override;
+  virtual void AddLocalVideoTrack() override;
 
   // CreateSessionDescriptionObserver implementation.
   void OnSuccess(webrtc::SessionDescriptionInterface* desc) override;
@@ -131,6 +139,11 @@ class Conductor : public webrtc::PeerConnectionObserver,
   std::deque<std::string*> pending_messages_;
   std::string server_;
   bool isCreatedPc_ = false;
+         
+  // local streams
+  rtc::scoped_refptr<webrtc::MediaStreamInterface> localMediaStream_;
+  rtc::scoped_refptr<webrtc::AudioTrackInterface> audio_track_;
+  rtc::scoped_refptr<webrtc::VideoTrackInterface> video_track_;
 };
 
 #endif  // EXAMPLES_PEERCONNECTION_CLIENT_CONDUCTOR_H_

@@ -85,6 +85,29 @@ void MainWindow::on_connectBtn_clicked()
     }
 }
 
+void MainWindow::on_audioSwitch_clicked() {
+    if (ui->audioSwitch->text() == "mute audio") {
+        if(callback_->RemoveLocalAudioTrack())
+            ui->audioSwitch->setText("unmute audio");
+        else
+            RTC_LOG(LERROR) << "errorlog:remove audio track";
+    } else {
+        ui->audioSwitch->setText("mute audio");
+        callback_->AddLocalAudioTrack();
+    }
+}
+
+void MainWindow::on_videoSwitch_clicked() {
+    if (ui->videoSwitch->text() == "mute video") {
+        if (callback_->RemoveLocalVideoTrack())
+            ui->videoSwitch->setText("unmute video");
+        else
+             RTC_LOG(LERROR) << "errorlog:remove video track";
+    } else {
+        callback_->AddLocalVideoTrack();
+    }
+}
+
 void MainWindow::on_listPeer_itemDoubleClicked(QListWidgetItem *item)
 {
     if (ui_ == LIST_PEERS) {

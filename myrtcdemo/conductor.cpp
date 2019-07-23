@@ -47,6 +47,8 @@
 #include "socket_notifier.h"
 #endif
 
+#define USE_LOCAL_STREAM 1
+
 namespace {
 // Names used for a IceCandidate JSON object.
 const char kCandidateSdpMidName[] = "sdpMid";
@@ -238,6 +240,10 @@ void Conductor::OnAddTrack(
   RTC_LOG(INFO) << __FUNCTION__ << " " << receiver->id();
   main_wnd_->QueueUIThreadCallback(NEW_TRACK_ADDED,
                                    receiver->track().release());
+}
+
+void Conductor::OnAddStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) {
+    RTC_LOG(INFO) << __FUNCTION__ << " " << stream.get();
 }
 
 void Conductor::OnRemoveTrack(
@@ -481,35 +487,51 @@ void Conductor::AddTracks() {
   if (!peer_connection_->GetSenders().empty()) {
     return;  // Already added tracks.
   }
-
-  rtc::scoped_refptr<webrtc::AudioTrackInterface> audio_track(
-      peer_connection_factory_->CreateAudioTrack(
-          kAudioLabel, peer_connection_factory_->CreateAudioSource(
-                           cricket::AudioOptions())));
-  auto result_or_error = peer_connection_->AddTrack(audio_track, {kStreamId});
-  if (!result_or_error.ok()) {
-    RTC_LOG(LS_ERROR) << "Failed to add audio track to PeerConnection: "
-                      << result_or_error.error().message();
-  }
-
-  rtc::scoped_refptr<CapturerTrackSource> video_device =
-      CapturerTrackSource::Create();
-  
-  if (video_device) {
-    rtc::scoped_refptr<webrtc::VideoTrackInterface> video_track_(
-        peer_connection_factory_->CreateVideoTrack(kVideoLabel, video_device));
-    main_wnd_->StartLocalRenderer(video_track_);
-
-    result_or_error = peer_connection_->AddTrack(video_track_, {kStreamId});
-    if (!result_or_error.ok()) {
-      RTC_LOG(LS_ERROR) << "Failed to add video track to PeerConnection: "
-                        << result_or_error.error().message();
-    }
-  } else {
-    RTC_LOG(LS_ERROR) << "OpenVideoCaptureDevice failed";
-  }
-
+    
+  localMediaStream_ = peer_connection_factory_->CreateLocalMediaStream("ARDAMS");
+    
+  AddAudioTrack();
+  AddVideoTrack();
+    
   main_wnd_->SwitchToStreamingUI();
+}
+
+void Conductor::AddAudioTrack() {
+    audio_track_ = peer_connection_factory_->CreateAudioTrack(
+                        kAudioLabel, peer_connection_factory_->CreateAudioSource(cricket::AudioOptions()));
+#ifndef USE_LOCAL_STREAM
+    auto result_or_error = peer_connection_->AddTrack(audio_track_, {kStreamId});
+    if (!result_or_error.ok()) {
+        RTC_LOG(LS_ERROR) << "Failed to add audio track to PeerConnection: "
+        << result_or_error.error().message();
+    }
+#else
+    if (!localMediaStream_->AddTrack(audio_track_)) {
+        RTC_LOG(LS_ERROR) << "Failed to add audio track to PeerConnection: ";
+    }
+#endif
+}
+
+void Conductor::AddVideoTrack() {
+    
+    static rtc::scoped_refptr<CapturerTrackSource> video_device = CapturerTrackSource::Create();;
+    if (video_device) {
+        video_track_ = peer_connection_factory_->CreateVideoTrack(kVideoLabel, video_device);
+        main_wnd_->StartLocalRenderer(video_track_);
+#ifndef USE_LOCAL_STREAM
+        auto result_or_error = peer_connection_->AddTrack(video_track_, {kStreamId});
+        if (!result_or_error.ok()) {
+            RTC_LOG(LS_ERROR) << "Failed to add video track to PeerConnection: "
+            << result_or_error.error().message();
+        }
+#else
+        if (!localMediaStream_->AddTrack(video_track_)) {
+            RTC_LOG(LS_ERROR) << "Failed to add video track to PeerConnection: ";
+        }
+#endif
+    } else {
+        RTC_LOG(LS_ERROR) << "OpenVideoCaptureDevice failed";
+    }
 }
 
 void Conductor::DisconnectFromCurrentPeer() {
@@ -635,4 +657,38 @@ void Conductor::OnFailure(const std::string& error) {
 void Conductor::SendMessage(const std::string& json_object) {
   std::string* msg = new std::string(json_object);
   main_wnd_->QueueUIThreadCallback(SEND_MESSAGE_TO_PEER, msg);
+}
+
+
+bool Conductor::RemoveLocalAudioTrack() {
+    if (localMediaStream_ && audio_track_) {
+        if(localMediaStream_->RemoveTrack(audio_track_)){
+            audio_track_ = nullptr;
+            return true;
+        } else {
+            return false;
+        }
+    }
+    return false;
+}
+
+bool Conductor::RemoveLocalVideoTrack() {
+    if (localMediaStream_ && video_track_) {
+        video_track_->set_enabled(false); // most important
+        if( localMediaStream_->RemoveTrack(video_track_)){
+            video_track_ = nullptr;
+            return true;
+        } else {
+            return false;
+        }
+    }
+    return false;
+}
+
+void Conductor::AddLocalAudioTrack() {
+    AddAudioTrack();
+}
+
+void Conductor::AddLocalVideoTrack() {
+    AddVideoTrack();
 }

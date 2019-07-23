@@ -32,6 +32,10 @@ class MainWndCallback {
   virtual void ConnectToPeer(int peer_id) = 0;
   virtual void DisconnectFromCurrentPeer() = 0;
   virtual void UIThreadCallback(int msg_id, void* data) = 0;
+  virtual bool RemoveLocalAudioTrack() = 0;
+  virtual bool RemoveLocalVideoTrack() = 0;
+  virtual void AddLocalAudioTrack() = 0;
+  virtual void AddLocalVideoTrack() = 0;
   virtual void Close() = 0;
 
  protected:
@@ -91,6 +95,8 @@ private slots:
     void getFrameSlot(QImage img, bool isLocal);
 
     void on_connectBtn_clicked();
+    void on_audioSwitch_clicked();
+    void on_videoSwitch_clicked();
 
     void on_listPeer_itemDoubleClicked(QListWidgetItem *item);
 

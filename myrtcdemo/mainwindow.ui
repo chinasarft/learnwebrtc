@@ -46,7 +46,17 @@
         <number>0</number>
        </property>
        <item alignment="Qt::AlignVCenter">
-        <widget class="QTextEdit" name="textAddress"/>
+        <widget class="QTextEdit" name="textAddress">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="placeholderText">
+          <string>ip address</string>
+         </property>
+        </widget>
        </item>
        <item alignment="Qt::AlignVCenter">
         <widget class="QTextEdit" name="textPort">
@@ -61,6 +71,9 @@
            <width>80</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="placeholderText">
+          <string>port</string>
          </property>
         </widget>
        </item>
@@ -80,13 +93,39 @@
        <item>
         <widget class="QLabel" name="state">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
          <property name="text">
           <string>not connected</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="audioSwitch">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>mute audio</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="videoSwitch">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>mute video</string>
          </property>
         </widget>
        </item>
