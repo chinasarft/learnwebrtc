@@ -1,8 +1,12 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/ssl_adapter.h"
 #include "rtc_base/net_helpers.h"
+#ifdef WIN32
 #include "rtc_base/win32_socket_init.h"
 #include "rtc_base/win32_socket_server.h"
+#else
+#define OutputDebugStringA printf
+#endif
 
 ///--------------------for test start-----------------
 #include <iostream>
@@ -363,7 +367,9 @@ void TestAsyncResolver::OnResolveResult(AsyncResolverInterface* resolver) {
 
 
 void webrtc_test_asyncresolver() {
+#ifdef WIN32
   WinsockInitializer w32sock;
+#endif
   TestAsyncResolver tar;
 
   AsyncResolver * r{nullptr};
@@ -384,9 +390,9 @@ void webrtc_test_asyncresolver() {
 //--------------------for test end---------------------
 
 int main() {
-  //webrtc_thread_invoke();
+  webrtc_thread_invoke();
   //webrtc_messagequeue_test();
-  webrtc_test_thread_run();
+  //webrtc_test_thread_run();
   //webrtc_test_asyncresolver();
   return 0;
 }
