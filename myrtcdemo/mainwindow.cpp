@@ -1,4 +1,4 @@
-#include <math.h>
+ï»¿#include <math.h>
 
 #include "api/video/i420_buffer.h"
 #include "examples/peerconnection/client/defaults.h"
@@ -49,8 +49,8 @@ void MainWindow::getFrameSlot(QImage img, bool isLocal) {
 void MainWindow::paintEvent(QPaintEvent *event)
 {
     /*
-    Êµ¼ÊÉÏpeerconnection_clientÕâÀïÊÇÍ¨¹ılocal_render_ºÍremote_render_»ñÈ¡µ½frameºÍ£¬ÔÚÕâÀï½øĞĞºÏÖ¡µÄ
-    È»ºóäÖÈ¾µÄ(»¹ÊÇgdiÀ´äÖÈ¾µÄ), ËùÒÔÎªÁËdemoÑİÊ¾£¬ÕâÀïÒ²Ê¹ÓÃĞ§ÂÊ²îµÄpixmapÀ´×ö
+    å®é™…ä¸Špeerconnection_clientè¿™é‡Œæ˜¯é€šè¿‡local_render_å’Œremote_render_è·å–åˆ°frameå’Œï¼Œåœ¨è¿™é‡Œè¿›è¡Œåˆå¸§çš„
+    ç„¶åæ¸²æŸ“çš„(è¿˜æ˜¯gdiæ¥æ¸²æŸ“çš„), æ‰€ä»¥ä¸ºäº†demoæ¼”ç¤ºï¼Œè¿™é‡Œä¹Ÿä½¿ç”¨æ•ˆç‡å·®çš„pixmapæ¥åš
     */
     if (image_.size().width() <= 0)
         return;
@@ -236,7 +236,7 @@ void MainWindow::VideoRenderer::OnFrame(const webrtc::VideoFrame& video_frame) {
                        width_ * 4,
                        buffer->width(), buffer->height());
     QImage tmpImg((uchar *)(imageBuf_.data()), buffer->width(), buffer->height(), QImage::Format_ARGB32);
-    // TODO ÕâÀïÒ»´Îcopy
+    // TODO è¿™é‡Œä¸€æ¬¡copy
     if (isLocal_) {
         tmpImg = tmpImg.scaled(320, 180);
     }
