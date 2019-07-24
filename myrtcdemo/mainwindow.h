@@ -22,176 +22,176 @@
 #endif
 
 namespace Ui {
-class MainWindow;
+    class MainWindow;
 }
 
 class MainWndCallback {
- public:
-  virtual void StartLogin(const std::string& server, int port) = 0;
-  virtual void DisconnectFromServer() = 0;
-  virtual void ConnectToPeer(int peer_id) = 0;
-  virtual void DisconnectFromCurrentPeer() = 0;
-  virtual void UIThreadCallback(int msg_id, void* data) = 0;
-  virtual bool RemoveLocalAudioTrack() = 0;
-  virtual bool RemoveLocalVideoTrack() = 0;
-  virtual void AddLocalAudioTrack() = 0;
-  virtual void AddLocalVideoTrack() = 0;
-  virtual void Close() = 0;
-
- protected:
-  virtual ~MainWndCallback() {}
+public:
+    virtual void StartLogin(const std::string& server, int port) = 0;
+    virtual void DisconnectFromServer() = 0;
+    virtual void ConnectToPeer(int peer_id) = 0;
+    virtual void DisconnectFromCurrentPeer() = 0;
+    virtual void UIThreadCallback(int msg_id, void* data) = 0;
+    virtual bool RemoveLocalAudioTrack() = 0;
+    virtual bool RemoveLocalVideoTrack() = 0;
+    virtual void AddLocalAudioTrack() = 0;
+    virtual void AddLocalVideoTrack() = 0;
+    virtual void Close() = 0;
+    
+protected:
+    virtual ~MainWndCallback() {}
 };
 
 // Pure virtual interface for the main window.
 class VMainWindow {
- public:
-  virtual ~VMainWindow() {}
-
-  enum UI {
-    CONNECT_TO_SERVER,
-    LIST_PEERS,
-    STREAMING,
-  };
-
-  virtual void RegisterObserver(MainWndCallback* callback) = 0;
-
-  virtual void MessageBox(const char* caption,
-                          const char* text,
-                          bool is_error) = 0;
-
-  virtual UI current_ui() = 0;
-
-  virtual void SwitchToPeerList(const Peers& peers) = 0;
-  virtual void SwitchToStreamingUI() = 0;
-
-  virtual void StartLocalRenderer(webrtc::VideoTrackInterface* local_video) = 0;
-  virtual void StopLocalRenderer() = 0;
-  virtual void StartRemoteRenderer(
-      webrtc::VideoTrackInterface* remote_video) = 0;
-  virtual void StopRemoteRenderer() = 0;
-
-  virtual void QueueUIThreadCallback(int msg_id, void* data) = 0;
+public:
+    virtual ~VMainWindow() {}
+    
+    enum UI {
+        CONNECT_TO_SERVER,
+        LIST_PEERS,
+        STREAMING,
+    };
+    
+    virtual void RegisterObserver(MainWndCallback* callback) = 0;
+    
+    virtual void MessageBox(const char* caption,
+                            const char* text,
+                            bool is_error) = 0;
+    
+    virtual UI current_ui() = 0;
+    
+    virtual void SwitchToPeerList(const Peers& peers) = 0;
+    virtual void SwitchToStreamingUI() = 0;
+    
+    virtual void StartLocalRenderer(webrtc::VideoTrackInterface* local_video) = 0;
+    virtual void StopLocalRenderer() = 0;
+    virtual void StartRemoteRenderer(
+                                     webrtc::VideoTrackInterface* remote_video) = 0;
+    virtual void StopRemoteRenderer() = 0;
+    
+    virtual void QueueUIThreadCallback(int msg_id, void* data) = 0;
 };
 
 class MainWindow : public QMainWindow, public VMainWindow
 {
     Q_OBJECT
-
+    
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-
+    
 protected:
     void paintEvent(QPaintEvent *event);
     void closeEvent(QCloseEvent *event);
-
+    
 signals:
     void uiCallbackSig(int msg_id, void* data);
     void getFrameSig(QImage img, bool isLocal);
-
-
-private slots:
+    
+    
+    private slots:
     void uiCallbackSlot(int msg_id, void* data);
     void getFrameSlot(QImage img, bool isLocal);
-
+    
     void on_connectBtn_clicked();
     void on_audioSwitch_clicked();
     void on_videoSwitch_clicked();
-
+    
     void on_listPeer_itemDoubleClicked(QListWidgetItem *item);
-
+    
     void on_listPeer_currentRowChanged(int currentRow);
-
+    
 private:
     QImage image_;
     QImage remoteImage_;
     Ui::MainWindow *ui;
-
+    
 public:
     static const char kClassName[];
-
-  bool Create();
-  bool Destroy();
-
-  virtual void RegisterObserver(MainWndCallback* callback);
-  virtual void SwitchToPeerList(const Peers& peers);
-  virtual void SwitchToStreamingUI();
-  virtual void MessageBox(const char* caption, const char* text, bool is_error);
-  virtual UI current_ui() { return ui_; }
-
-  virtual void StartLocalRenderer(webrtc::VideoTrackInterface* local_video);
-  virtual void StopLocalRenderer();
-  virtual void StartRemoteRenderer(webrtc::VideoTrackInterface* remote_video);
-  virtual void StopRemoteRenderer();
-
-  virtual void QueueUIThreadCallback(int msg_id, void* data);
-
-  HWND localHandle() const;
-
-  class VideoRenderer : public rtc::VideoSinkInterface<webrtc::VideoFrame> {
-   public:
-    VideoRenderer(bool isLocal,
-                  webrtc::VideoTrackInterface* track_to_render);
-    virtual ~VideoRenderer();
-
-    void Lock() { buffer_lock_.Enter(); }
-
-    void Unlock() { buffer_lock_.Leave(); }
-
-    // VideoSinkInterface implementation
-    void OnFrame(const webrtc::VideoFrame& frame) override;
-    const uint8_t* image() const { return imageBuf_.data(); }
-
-   protected:
-    void SetSize(int width, int height);
-
-    enum {
-      SET_SIZE,
-      RENDER_FRAME,
+    
+    bool Create();
+    bool Destroy();
+    
+    virtual void RegisterObserver(MainWndCallback* callback);
+    virtual void SwitchToPeerList(const Peers& peers);
+    virtual void SwitchToStreamingUI();
+    virtual void MessageBox(const char* caption, const char* text, bool is_error);
+    virtual UI current_ui() { return ui_; }
+    
+    virtual void StartLocalRenderer(webrtc::VideoTrackInterface* local_video);
+    virtual void StopLocalRenderer();
+    virtual void StartRemoteRenderer(webrtc::VideoTrackInterface* remote_video);
+    virtual void StopRemoteRenderer();
+    
+    virtual void QueueUIThreadCallback(int msg_id, void* data);
+    
+    HWND localHandle() const;
+    
+    class VideoRenderer : public rtc::VideoSinkInterface<webrtc::VideoFrame> {
+    public:
+        VideoRenderer(bool isLocal,
+                      webrtc::VideoTrackInterface* track_to_render);
+        virtual ~VideoRenderer();
+        
+        void Lock() { buffer_lock_.Enter(); }
+        
+        void Unlock() { buffer_lock_.Leave(); }
+        
+        // VideoSinkInterface implementation
+        void OnFrame(const webrtc::VideoFrame& frame) override;
+        const uint8_t* image() const { return imageBuf_.data(); }
+        
+    protected:
+        void SetSize(int width, int height);
+        
+        enum {
+            SET_SIZE,
+            RENDER_FRAME,
+        };
+        
+        bool isLocal_;
+        int width_ = 0;
+        int height_ = 0;
+        std::vector<uint8_t> imageBuf_;
+        rtc::CriticalSection buffer_lock_;
+        rtc::scoped_refptr<webrtc::VideoTrackInterface> rendered_track_;
     };
-
-    bool isLocal_;
-    int width_ = 0;
-    int height_ = 0;
-    std::vector<uint8_t> imageBuf_;
-    rtc::CriticalSection buffer_lock_;
-    rtc::scoped_refptr<webrtc::VideoTrackInterface> rendered_track_;
-  };
-
-  // A little helper class to make sure we always to proper locking and
-  // unlocking when working with VideoRenderer buffers.
-  template <typename T>
-  class AutoLock {
-   public:
-    explicit AutoLock(T* obj) : obj_(obj) { obj_->Lock(); }
-    ~AutoLock() { obj_->Unlock(); }
-
-   protected:
-    T* obj_;
-  };
-
- protected:
-  enum ChildWindowID {
-    EDIT_ID = 1,
-    BUTTON_ID,
-    LABEL1_ID,
-    LABEL2_ID,
-    LISTBOX_ID,
-  };
-
-  void OnPaint();
-  void OnDestroyed();
-
- private:
-  std::unique_ptr<VideoRenderer> local_renderer_;
-  std::unique_ptr<VideoRenderer> remote_renderer_;
-  UI ui_;
-  rtc::PlatformThreadId ui_thread_id_;
-  bool destroyed_;
-  void* nested_msg_;
-  MainWndCallback* callback_;
-  std::string server_;
-  std::string port_;
+    
+    // A little helper class to make sure we always to proper locking and
+    // unlocking when working with VideoRenderer buffers.
+    template <typename T>
+    class AutoLock {
+    public:
+        explicit AutoLock(T* obj) : obj_(obj) { obj_->Lock(); }
+        ~AutoLock() { obj_->Unlock(); }
+        
+    protected:
+        T* obj_;
+    };
+    
+protected:
+    enum ChildWindowID {
+        EDIT_ID = 1,
+        BUTTON_ID,
+        LABEL1_ID,
+        LABEL2_ID,
+        LISTBOX_ID,
+    };
+    
+    void OnPaint();
+    void OnDestroyed();
+    
+private:
+    std::unique_ptr<VideoRenderer> local_renderer_;
+    std::unique_ptr<VideoRenderer> remote_renderer_;
+    UI ui_;
+    rtc::PlatformThreadId ui_thread_id_;
+    bool destroyed_;
+    void* nested_msg_;
+    MainWndCallback* callback_;
+    std::string server_;
+    std::string port_;
     bool isCreatePc_ = false;
 };
 

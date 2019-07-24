@@ -4,7 +4,7 @@
 
 
 AsyncTcpSocketDispatcher::AsyncTcpSocketDispatcher(int family) : family_(family), rtc::SocketDispatcher(SocketNotifier::GetSocketNotifier()->GetSocketServer()) {
-  
+    
 }
 
 int AsyncTcpSocketDispatcher::Connect(const  rtc::SocketAddress& addr) {
@@ -21,11 +21,11 @@ SocketNotifier* SocketNotifier::GetSocketNotifier() {
 
 
 SocketNotifier::SocketNotifier() {
-
+    
     ss_ = std::make_shared<rtc::PhysicalSocketServer>();
-
+    
     thread_ = std::make_shared<rtc::Thread>(dynamic_cast<rtc::SocketServer*>(ss_.get()));
-
+    
     thread_->SetName("my_socket_thread", nullptr);
     thread_->Start();
 }
@@ -59,6 +59,6 @@ SignalHandler::SignalHandler() {
 }
 
 rtc::Thread* SignalHandler::GetThreadPtr() {
-	return thread_.get();
+    return thread_.get();
 }
 

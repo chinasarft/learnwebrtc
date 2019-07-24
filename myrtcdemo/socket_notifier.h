@@ -6,9 +6,9 @@
 
 class AsyncTcpSocketDispatcher : public rtc::SocketDispatcher {
 public:
-	explicit AsyncTcpSocketDispatcher(int family);
+    explicit AsyncTcpSocketDispatcher(int family);
     int Connect(const rtc::SocketAddress& addr) override;
-
+    
 private:
     int family_;
 };
@@ -20,7 +20,7 @@ public:
     void AddSyncSocket(rtc::Dispatcher* pDispatcher);
     rtc::PhysicalSocketServer* GetSocketServer();
     rtc::Thread* GetThreadPtr() const;
-
+    
 private:
     SocketNotifier();
     std::shared_ptr<rtc::PhysicalSocketServer> ss_;
@@ -32,11 +32,11 @@ private:
 class SignalHandler {
 public:
     static SignalHandler* GetSignalHandler();
-	rtc::Thread* GetThreadPtr();
+    rtc::Thread* GetThreadPtr();
     
 private:
     SignalHandler();
-	std::shared_ptr<rtc::Thread> thread_;
+    std::shared_ptr<rtc::Thread> thread_;
     std::shared_ptr<rtc::SocketServer> ss_;
 };
 

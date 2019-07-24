@@ -27,22 +27,22 @@ int main(int argc, char **argv)
     SignalHandler::GetSignalHandler();
 #endif
 #ifndef WIN32
-	fprintf(stderr, "main thread id:%p\n", pthread_self());
+    fprintf(stderr, "main thread id:%p\n", pthread_self());
 #endif
-
+    
     QApplication a(argc, argv);
     MainWindow wnd;
     wnd.show();
-
+    
     rtc::InitializeSSL();
     PeerConnectionClient client;
     rtc::scoped_refptr<Conductor> conductor(
-        new rtc::RefCountedObject<Conductor>(&client, &wnd));
-
-
+                                            new rtc::RefCountedObject<Conductor>(&client, &wnd));
+    
+    
     int ret = a.exec();
-
+    
     rtc::CleanupSSL();
-
+    
     return ret;
 }
