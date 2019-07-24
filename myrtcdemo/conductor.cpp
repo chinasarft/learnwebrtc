@@ -47,7 +47,10 @@
 #include "socket_notifier.h"
 #endif
 
-#define USE_LOCAL_STREAM 1
+// not invode peerconnection.addtrack
+// check this is involved with sdp generation. no media info in sdp id not invoke?
+//#define DO_ADD_AUDIO_TRACK 1
+#define DO_ADD_VIDEO_TRACK 1
 
 namespace {
 // Names used for a IceCandidate JSON object.
@@ -142,12 +145,12 @@ bool Conductor::InitializePeerConnection() {
   RTC_DCHECK(!peer_connection_factory_);
   RTC_DCHECK(!peer_connection_);
 #ifndef USE_WIN32
-   SignalHandler::GetSignalHandler()->Invoke<int>(
+   SignalHandler::GetSignalHandler()->GetThreadPtr()->Invoke<int>(
         RTC_FROM_HERE,
         [this](){
             peer_connection_factory_ = webrtc::CreatePeerConnectionFactory(
                 nullptr /* network_thread */, nullptr /* worker_thread */,
-                SignalHandler::GetSignalHandler() /* signaling_thread */, nullptr /* default_adm */,
+                SignalHandler::GetSignalHandler()->GetThreadPtr() /* signaling_thread */, nullptr /* default_adm */,
                 webrtc::CreateBuiltinAudioEncoderFactory(),
                 webrtc::CreateBuiltinAudioDecoderFactory(),
                 webrtc::CreateBuiltinVideoEncoderFactory(),
@@ -499,35 +502,42 @@ void Conductor::AddTracks() {
 void Conductor::AddAudioTrack() {
     audio_track_ = peer_connection_factory_->CreateAudioTrack(
                         kAudioLabel, peer_connection_factory_->CreateAudioSource(cricket::AudioOptions()));
-#ifndef USE_LOCAL_STREAM
+#ifdef DO_ADD_AUDIO_TRACK
     auto result_or_error = peer_connection_->AddTrack(audio_track_, {kStreamId});
     if (!result_or_error.ok()) {
         RTC_LOG(LS_ERROR) << "Failed to add audio track to PeerConnection: "
         << result_or_error.error().message();
-    }
-#else
-    if (!localMediaStream_->AddTrack(audio_track_)) {
+    } else {
+		audio_rtp_sender_ = result_or_error.MoveValue();
+#endif
+		if (!localMediaStream_->AddTrack(audio_track_)) {
         RTC_LOG(LS_ERROR) << "Failed to add audio track to PeerConnection: ";
     }
+#ifdef DO_ADD_AUDIO_TRACK
+	}
 #endif
 }
 
 void Conductor::AddVideoTrack() {
     
     static rtc::scoped_refptr<CapturerTrackSource> video_device = CapturerTrackSource::Create();;
-    if (video_device) {
-        video_track_ = peer_connection_factory_->CreateVideoTrack(kVideoLabel, video_device);
-        main_wnd_->StartLocalRenderer(video_track_);
-#ifndef USE_LOCAL_STREAM
-        auto result_or_error = peer_connection_->AddTrack(video_track_, {kStreamId});
-        if (!result_or_error.ok()) {
-            RTC_LOG(LS_ERROR) << "Failed to add video track to PeerConnection: "
-            << result_or_error.error().message();
-        }
-#else
-        if (!localMediaStream_->AddTrack(video_track_)) {
-            RTC_LOG(LS_ERROR) << "Failed to add video track to PeerConnection: ";
-        }
+	if (video_device) {
+		video_track_ = peer_connection_factory_->CreateVideoTrack(kVideoLabel, video_device);
+		main_wnd_->StartLocalRenderer(video_track_);
+#ifdef DO_ADD_VIDEO_TRACK
+		auto result_or_error = peer_connection_->AddTrack(video_track_, { kStreamId });
+		if (!result_or_error.ok()) {
+			RTC_LOG(LS_ERROR) << "Failed to add video track to PeerConnection: "
+				<< result_or_error.error().message();
+		}
+		else {
+		    video_rtp_sender_ = result_or_error.MoveValue();
+#endif
+		if (!localMediaStream_->AddTrack(video_track_)) {
+			RTC_LOG(LS_ERROR) << "Failed to add video track to PeerConnection: ";
+		}
+#ifdef DO_ADD_VIDEO_TRACK
+	}
 #endif
     } else {
         RTC_LOG(LS_ERROR) << "OpenVideoCaptureDevice failed";
@@ -663,6 +673,10 @@ void Conductor::SendMessage(const std::string& json_object) {
 bool Conductor::RemoveLocalAudioTrack() {
     if (localMediaStream_ && audio_track_) {
         if(localMediaStream_->RemoveTrack(audio_track_)){
+#ifdef DO_ADD_AUDIO_TRACK
+			peer_connection_->RemoveTrack(audio_rtp_sender_); // remove from sdp
+			audio_rtp_sender_ = nullptr;
+#endif
             audio_track_ = nullptr;
             return true;
         } else {
@@ -676,6 +690,10 @@ bool Conductor::RemoveLocalVideoTrack() {
     if (localMediaStream_ && video_track_) {
         video_track_->set_enabled(false); // most important
         if( localMediaStream_->RemoveTrack(video_track_)){
+#ifdef DO_ADD_VIDEO_TRACK
+			peer_connection_->RemoveTrack(video_rtp_sender_); // remove from sdp
+			video_rtp_sender_ = nullptr;
+#endif
             video_track_ = nullptr;
             return true;
         } else {

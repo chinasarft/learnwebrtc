@@ -144,6 +144,8 @@ class Conductor : public webrtc::PeerConnectionObserver,
   rtc::scoped_refptr<webrtc::MediaStreamInterface> localMediaStream_;
   rtc::scoped_refptr<webrtc::AudioTrackInterface> audio_track_;
   rtc::scoped_refptr<webrtc::VideoTrackInterface> video_track_;
+  rtc::scoped_refptr<webrtc::RtpSenderInterface> audio_rtp_sender_;
+  rtc::scoped_refptr<webrtc::RtpSenderInterface> video_rtp_sender_;
 };
 
 #endif  // EXAMPLES_PEERCONNECTION_CLIENT_CONDUCTOR_H_
