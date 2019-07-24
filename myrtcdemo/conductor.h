@@ -66,13 +66,14 @@ class Conductor : public webrtc::PeerConnectionObserver,
 
   void OnSignalingChange(
       webrtc::PeerConnectionInterface::SignalingState new_state) override {}
+                      
   virtual void OnTrack(
       rtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver)  override;
   void OnAddTrack(
       rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver,
       const std::vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>>& streams) override;
-
   virtual void OnAddStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) override;
+                      
   void OnRemoveTrack(
       rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver) override;
   void OnDataChannel(

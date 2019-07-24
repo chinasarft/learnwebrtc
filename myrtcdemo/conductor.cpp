@@ -49,7 +49,7 @@
 
 // not invode peerconnection.addtrack
 // check this is involved with sdp generation. no media info in sdp id not invoke?
-//#define DO_ADD_AUDIO_TRACK 1
+#define DO_ADD_AUDIO_TRACK 1
 #define DO_ADD_VIDEO_TRACK 1
 
 namespace {
@@ -241,20 +241,34 @@ void Conductor::OnAddTrack(
     const std::vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>>& streams) {
     //receiver->id() is not OnTrack::transceiver->mid()
     //receiver->track().get() is equal to OnTrack::transceiver->receiver()->track().get()
-    RTC_LOG(INFO) << __FUNCTION__ << " " << receiver->id()<<"|"<<receiver->track().get();
+    RTC_LOG(INFO) << __FUNCTION__ << " " << receiver->id()<<"|"<<receiver->track().get()<<"|streamptr:"<<streams.size();
+    for (int i = 0; i < streams.size(); i++) {
+        RTC_LOG(INFO) << __FUNCTION__ << " " <<streams[i].get();
+    }
     //main_wnd_->QueueUIThreadCallback(NEW_TRACK_ADDED, receiver->track().release());
 }
 
 void Conductor::OnTrack(
     rtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver) {
 
-    RTC_LOG(INFO) << __FUNCTION__ << " " << transceiver->mid().value()<<"|"<<transceiver->receiver()->track().get();
+    RTC_LOG(INFO) << __FUNCTION__ << " " << transceiver->mid().value()<<"|trackptr:"<<transceiver->receiver()->track().get();
   main_wnd_->QueueUIThreadCallback(NEW_TRACK_ADDED,
                                    transceiver->receiver()->track().release());
 }
 
 void Conductor::OnAddStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) {
     RTC_LOG(INFO) << __FUNCTION__ << " " << stream.get();
+    auto atracks = stream->GetAudioTracks();
+    for (int i = 0; i < atracks.size(); i++) {
+        RTC_LOG(INFO) << __FUNCTION__ << " atrackptr:"<<atracks.at(i).get();
+    }
+    auto vtracks = stream->GetVideoTracks();
+    for (int i = 0; i < vtracks.size(); i++) {
+        RTC_LOG(INFO) << __FUNCTION__ << " vtrackptr:"<<vtracks.at(i).get();
+    }
+    // can do this, not need to overrive OnTrack or OnAddTrack
+    // OnAddStream is callback after OnTrack
+    //main_wnd_->QueueUIThreadCallback(NEW_TRACK_ADDED, vtracks.at(i));
 }
 
 void Conductor::OnRemoveTrack(
