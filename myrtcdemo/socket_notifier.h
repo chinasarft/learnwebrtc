@@ -29,12 +29,14 @@ private:
 
 
 // signal
-class SignalHandler : public rtc::Thread{
+class SignalHandler {
 public:
     static SignalHandler* GetSignalHandler();
+	rtc::Thread* GetThreadPtr();
     
 private:
     SignalHandler();
+	std::shared_ptr<rtc::Thread> thread_;
     std::shared_ptr<rtc::SocketServer> ss_;
 };
 

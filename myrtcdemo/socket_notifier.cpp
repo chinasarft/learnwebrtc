@@ -53,7 +53,12 @@ SignalHandler* SignalHandler::GetSignalHandler() {
 
 SignalHandler::SignalHandler() {
     ss_.reset(new rtc::NullSocketServer());
-    rtc::Thread(ss_.get());
-    SetName("my_signal_thread", nullptr);
-    Start();
+    thread_ = std::make_shared<rtc::Thread>(ss_.get());
+    thread_->SetName("my_signal_thread", nullptr);
+    thread_->Start();
 }
+
+rtc::Thread* SignalHandler::GetThreadPtr() {
+	return thread_.get();
+}
+
