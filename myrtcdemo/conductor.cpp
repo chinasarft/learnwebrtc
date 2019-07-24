@@ -238,11 +238,19 @@ void Conductor::EnsureStreamingUI() {
 
 void Conductor::OnAddTrack(
     rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver,
-    const std::vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>>&
-        streams) {
-  RTC_LOG(INFO) << __FUNCTION__ << " " << receiver->id();
+    const std::vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>>& streams) {
+    //receiver->id() is not OnTrack::transceiver->mid()
+    //receiver->track().get() is equal to OnTrack::transceiver->receiver()->track().get()
+    RTC_LOG(INFO) << __FUNCTION__ << " " << receiver->id()<<"|"<<receiver->track().get();
+    //main_wnd_->QueueUIThreadCallback(NEW_TRACK_ADDED, receiver->track().release());
+}
+
+void Conductor::OnTrack(
+    rtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver) {
+
+    RTC_LOG(INFO) << __FUNCTION__ << " " << transceiver->mid().value()<<"|"<<transceiver->receiver()->track().get();
   main_wnd_->QueueUIThreadCallback(NEW_TRACK_ADDED,
-                                   receiver->track().release());
+                                   transceiver->receiver()->track().release());
 }
 
 void Conductor::OnAddStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) {
