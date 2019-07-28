@@ -99,6 +99,7 @@ add_subdirectory(mypeerclient)
 add_subdirectory(myrtcdemo)
 add_subdirectory(webrtcaudio)
 add_subdirectory(rtprtcp)
+add_subdirectory(videocapture)
 
 set(SOURCE_FILES rtp_rtcp_impl_unittest.cc
 	"${WEBRTC_LIB_PATH}/../../test/rtcp_packet_parser.cc"
