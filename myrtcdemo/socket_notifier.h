@@ -20,6 +20,7 @@ public:
     void AddSyncSocket(rtc::Dispatcher* pDispatcher);
     rtc::PhysicalSocketServer* GetSocketServer();
     rtc::Thread* GetThreadPtr() const;
+	~SocketNotifier();
     
 private:
     SocketNotifier();
@@ -36,7 +37,7 @@ public:
     
 private:
     SignalHandler();
-    std::shared_ptr<rtc::Thread> thread_;
-    std::shared_ptr<rtc::SocketServer> ss_;
+    rtc::Thread* thread_;
+    rtc::SocketServer* ss_;
 };
 
